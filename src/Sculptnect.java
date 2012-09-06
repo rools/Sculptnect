@@ -1,3 +1,13 @@
+import java.awt.Frame;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+
+import javax.media.opengl.GLCapabilities;
+import javax.media.opengl.GLProfile;
+import javax.media.opengl.awt.GLCanvas;
+
 import org.openkinect.freenect.Context;
 import org.openkinect.freenect.Device;
 import org.openkinect.freenect.Freenect;
@@ -14,15 +24,62 @@ public class Sculptnect {
 		} else {
 			System.err.println("Error, no Kinect detected.");
 		}
+
+		GLProfile glp = GLProfile.get(GLProfile.GL2);
+
+		// Set the OpenGL canvas creation parameters
+		GLCapabilities caps = new GLCapabilities(glp);
+		caps.setRedBits(8);
+		caps.setGreenBits(8);
+		caps.setBlueBits(8);
+		caps.setDepthBits(32);
+		caps.setSampleBuffers(true);
+		caps.setNumSamples(4);
+
+		// Create GLCanvas
+		GLCanvas canvas = new GLCanvas(caps);
+		canvas.addGLEventListener(new Scene());
+
+		// Create new AWT window to contain the GLCanvas
+		Frame frame = new Frame("Sculptnect");
+		frame.add(canvas);
+		frame.setSize(800, 800);
+		frame.setVisible(true);
+
+		// Add listener to respond to window closing
+		frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e) {
+				exit(0);
+			}
+		});
+
+		// Add key listener
+		frame.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				// Exit if ESC was pressed
+				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+					exit(0);
+				}
+			}
+		});
 	}
 
-	// TODO: Call this function before the program quits
+	public void exit(int exitCode) {
+		// Clean up Kinect before exiting
+		cleanup();
+
+		System.exit(exitCode);
+	}
+
 	public void cleanup() {
 		// Shut down Kinect
-		if (kinectContext != null)
+		if (kinectContext != null) {
 			if (kinect != null) {
 				kinect.close();
 			}
+		}
 		kinectContext.shutdown();
 	}
 
