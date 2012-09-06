@@ -39,6 +39,7 @@ public class Sculptnect {
 		// Create GLCanvas
 		GLCanvas canvas = new GLCanvas(caps);
 		canvas.addGLEventListener(new Scene());
+		canvas.setFocusable(false);
 
 		// Create new AWT window to contain the GLCanvas
 		Frame frame = new Frame("Sculptnect");
