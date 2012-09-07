@@ -54,6 +54,7 @@ public class Sculptnect {
 		frame.setSize(800, 800);
 		frame.setVisible(true);
 
+		// Add and start a display link
 		FPSAnimator animator = new FPSAnimator(canvas, 60);
 		animator.start();
 
