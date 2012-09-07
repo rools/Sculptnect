@@ -1,3 +1,4 @@
+package sculptnect;
 import java.nio.FloatBuffer;
 
 import javax.media.opengl.GL;
@@ -8,6 +9,8 @@ import javax.media.opengl.glu.gl2.GLUgl2;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
+
+import shape.SphereGenerator;
 
 import com.jogamp.common.nio.Buffers;
 

@@ -1,3 +1,7 @@
+package sculptnect;
+
+import shape.ShapeGenerator;
+
 public class VoxelGrid {
 	public static final byte VOXEL_GRID_AIR = 0;
 	public static final byte VOXEL_GRID_CLAY = 1;

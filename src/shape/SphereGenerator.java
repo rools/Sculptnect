@@ -1,4 +1,7 @@
+package shape;
 import javax.vecmath.Point3i;
+
+import sculptnect.VoxelGrid;
 
 public class SphereGenerator extends ShapeGenerator {
 	float _radius;
