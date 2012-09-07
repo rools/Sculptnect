@@ -1,6 +1,8 @@
 import java.awt.Frame;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -11,6 +13,8 @@ import javax.media.opengl.awt.GLCanvas;
 import org.openkinect.freenect.Context;
 import org.openkinect.freenect.Device;
 import org.openkinect.freenect.Freenect;
+
+import com.jogamp.opengl.util.FPSAnimator;
 
 public class Sculptnect {
 	private Context kinectContext = null;
@@ -36,9 +40,11 @@ public class Sculptnect {
 		caps.setSampleBuffers(true);
 		caps.setNumSamples(4);
 
+		final SculptScene scene = new SculptScene();
+
 		// Create GLCanvas
 		GLCanvas canvas = new GLCanvas(caps);
-		canvas.addGLEventListener(new Scene());
+		canvas.addGLEventListener(scene);
 		canvas.setFocusable(false);
 
 		// Create new AWT window to contain the GLCanvas
@@ -46,6 +52,9 @@ public class Sculptnect {
 		frame.add(canvas);
 		frame.setSize(800, 800);
 		frame.setVisible(true);
+
+		FPSAnimator animator = new FPSAnimator(canvas, 60);
+		animator.start();
 
 		// Add listener to respond to window closing
 		frame.addWindowListener(new WindowAdapter() {
@@ -65,6 +74,28 @@ public class Sculptnect {
 				}
 			}
 		});
+
+		// Create mouse listener
+		MouseAdapter mouseAdapter = new MouseAdapter() {
+			int prevX, prevY;
+
+			@Override
+			public void mousePressed(MouseEvent e) {
+				prevX = e.getX();
+				prevY = e.getY();
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				scene.mouseDragged(prevX, prevY, e.getX(), e.getY());
+				prevX = e.getX();
+				prevY = e.getY();
+			}
+		};
+
+		// Add the mouse listener
+		canvas.addMouseMotionListener(mouseAdapter);
+		canvas.addMouseListener(mouseAdapter);
 	}
 
 	public void exit(int exitCode) {
