@@ -5,6 +5,7 @@ import javax.media.opengl.GL2;
 import javax.media.opengl.GLAutoDrawable;
 import javax.media.opengl.GLEventListener;
 import javax.media.opengl.glu.gl2.GLUgl2;
+import javax.vecmath.Point3i;
 import javax.vecmath.Vector2f;
 import javax.vecmath.Vector3f;
 
@@ -42,7 +43,7 @@ public class SculptScene implements GLEventListener {
 		// Define light color and position
 		float ambientColor[] = { 0.5f, 0.5f, 0.5f, 1.0f };
 		float lightColor1[] = { 0.02f, 0.02f, 0.02f, 1.0f };
-		float lightPos1[] = { 100.0f, 100.0f, 100.0f, 1.0f };
+		float lightPos1[] = { 100000.0f, 100000.0f, 100000.0f, 1.0f };
 
 		// Set light color and position
 		gl.glLightModelfv(GL2.GL_LIGHT_MODEL_AMBIENT, ambientColor, 0);
@@ -51,7 +52,14 @@ public class SculptScene implements GLEventListener {
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, lightPos1, 0);
 
 		// Create voxel grid
-		_grid = new VoxelGrid(100);
+		int size = 100;
+		_grid = new VoxelGrid(size);
+		
+		// Add sphere shape to voxel grid
+		SphereGenerator sphereGenerator = new SphereGenerator(new Point3i(
+				size / 2, size / 2, size / 2), size / 4);
+		_grid.insertShape(sphereGenerator);
+		
 		updateVisibleVoxels(gl);
 	}
 
@@ -122,7 +130,7 @@ public class SculptScene implements GLEventListener {
 
 		// Disable lighting to draw axis lines
 		gl.glDisable(GL2.GL_LIGHTING);
-		
+
 		// Draw coordinate axes
 		gl.glBegin(GL2.GL_LINES);
 		// X
@@ -140,7 +148,7 @@ public class SculptScene implements GLEventListener {
 		gl.glVertex3f(0.0f, 0.0f, 0.0f);
 		gl.glVertex3f(0.0f, 0.0f, _grid.depth);
 		gl.glEnd();
-		
+
 		// Enable light again
 		gl.glEnable(GL2.GL_LIGHTING);
 	}

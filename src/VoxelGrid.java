@@ -26,23 +26,6 @@ public class VoxelGrid {
 		this.height = height;
 		this.depth = depth;
 		_voxels = new byte[width][height][depth];
-
-		// TEMP: Initializing the voxel grid to contain a sphere shape
-		for (int x = 0; x < width; x++) {
-			for (int y = 0; y < height; y++) {
-				for (int z = 0; z < depth; z++) {
-					float xp = x / (float) width - 0.5f;
-					float yp = y / (float) height - 0.5f;
-					float zp = z / (float) depth - 0.5f;
-
-					float r = xp * xp + yp * yp + zp * zp;
-					if (r < 0.10f) {
-						setVoxel(x, y, z, VOXEL_GRID_CLAY);
-						numVisibleVoxels++;
-					}
-				}
-			}
-		}
 	}
 
 	public byte getVoxel(int x, int y, int z) {
@@ -50,10 +33,33 @@ public class VoxelGrid {
 	}
 
 	public void setVoxel(int x, int y, int z, byte value) {
+		if (_voxels[x][y][z] == VOXEL_GRID_AIR && value != VOXEL_GRID_AIR) {
+			numVisibleVoxels++;
+		}
 		_voxels[x][y][z] = value;
 	}
 
 	public boolean isAir(int x, int y, int z) {
 		return _voxels[x][y][z] == VOXEL_GRID_AIR;
+	}
+
+	public void clear() {
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				for (int z = 0; z < depth; z++) {
+					setVoxel(x, y, z, VOXEL_GRID_AIR);
+				}
+			}
+		}
+	}
+
+	public void insertShape(ShapeGenerator generator) {
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				for (int z = 0; z < depth; z++) {
+					setVoxel(x, y, z, generator.valueForVoxel(x, y, z));
+				}
+			}
+		}
 	}
 }
