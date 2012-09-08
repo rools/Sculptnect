@@ -44,13 +44,15 @@ public class SculptScene implements GLEventListener {
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, lightPos1, 0);
 
 		// Create voxel grid
-		int size = 100;
+		int size = 128;
 		_grid = new VoxelGrid(gl, size);
 
 		// Add sphere shape to voxel grid
 		SphereGenerator sphereGenerator = new SphereGenerator(new Point3i(
-				size / 2, size / 2, size / 2), size / 4);
+				size / 2, size / 2, size / 2), size / 2 - 2);
 		_grid.insertShape(sphereGenerator);
+		
+		_grid.render.updateBuffers(gl);
 	}
 
 	@Override

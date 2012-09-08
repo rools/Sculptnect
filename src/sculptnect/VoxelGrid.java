@@ -86,7 +86,7 @@ public class VoxelGrid {
 	}
 
 	public void draw(GL2 gl) {
-		render.updateBuffers(gl);
+		
 		
 		render.draw(gl);
 	}
