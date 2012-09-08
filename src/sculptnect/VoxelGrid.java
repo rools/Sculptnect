@@ -3,6 +3,7 @@ package sculptnect;
 import javax.media.opengl.GL2;
 import javax.vecmath.Point2f;
 import javax.vecmath.Tuple2f;
+import javax.vecmath.Tuple3i;
 
 import shape.ShapeGenerator;
 
@@ -13,7 +14,6 @@ public class VoxelGrid {
 	private byte[][][] _voxels;
 
 	int width, height, depth;
-	public int numVisibleVoxels;
 
 	Tuple2f rotation = new Point2f();
 	VoxelGridRender render;
@@ -47,9 +47,9 @@ public class VoxelGrid {
 	}
 
 	public void setVoxel(int x, int y, int z, byte value) {
-		if (_voxels[x][y][z] == VOXEL_GRID_AIR && value != VOXEL_GRID_AIR) {
-			numVisibleVoxels++;
-		}
+		// Inform render that this voxel changed
+		render.markVoxelDirty(x, y, z);
+
 		_voxels[x][y][z] = value;
 	}
 
@@ -58,6 +58,7 @@ public class VoxelGrid {
 	}
 
 	public void clear() {
+		// Iterate through all voxels and set them all to air
 		for (int x = 0; x < width; x++) {
 			for (int y = 0; y < height; y++) {
 				for (int z = 0; z < depth; z++) {
@@ -68,9 +69,21 @@ public class VoxelGrid {
 	}
 
 	public void insertShape(ShapeGenerator generator) {
-		for (int x = 0; x < width; x++) {
-			for (int y = 0; y < height; y++) {
-				for (int z = 0; z < depth; z++) {
+		Tuple3i center = generator.getCenter();
+		Tuple3i size = generator.getSize();
+
+		// Calculate bounds for the shape to insert
+		int xmin = center.x - size.x / 2;
+		int xmax = center.x + size.x / 2;
+		int ymin = center.y - size.y / 2;
+		int ymax = center.y + size.y / 2;
+		int zmin = center.z - size.z / 2;
+		int zmax = center.z + size.z / 2;
+
+		// Iterate through the bounds and insert generated value
+		for (int x = xmin; x < xmax; x++) {
+			for (int y = ymin; y < ymax; y++) {
+				for (int z = zmin; z < zmax; z++) {
 					setVoxel(x, y, z, generator.valueForVoxel(x, y, z));
 				}
 			}
@@ -86,8 +99,8 @@ public class VoxelGrid {
 	}
 
 	public void draw(GL2 gl) {
-		
-		
+		render.updateDirtyCells(gl);
+
 		render.draw(gl);
 	}
 

@@ -25,7 +25,7 @@ public class SculptScene implements GLEventListener {
 		gl.glEnable(GL2.GL_DEPTH_TEST);
 		gl.glDepthFunc(GL2.GL_LEQUAL);
 
-		gl.glPointSize(10.0f);
+		gl.glPointSize(4.0f);
 
 		// Enable lights and set shading
 		gl.glShadeModel(GL2.GL_SMOOTH);
@@ -34,7 +34,8 @@ public class SculptScene implements GLEventListener {
 
 		// Define light color and position
 		float ambientColor[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-		float lightColor1[] = { 0.02f, 0.02f, 0.02f, 1.0f };
+		float light = 0.0035f;
+		float lightColor1[] = { light, light, light, 1.0f };
 		float lightPos1[] = { 100000.0f, 100000.0f, 100000.0f, 1.0f };
 
 		// Set light color and position
@@ -44,15 +45,13 @@ public class SculptScene implements GLEventListener {
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, lightPos1, 0);
 
 		// Create voxel grid
-		int size = 128;
+		int size = 512;
 		_grid = new VoxelGrid(gl, size);
 
 		// Add sphere shape to voxel grid
 		SphereGenerator sphereGenerator = new SphereGenerator(new Point3i(
 				size / 2, size / 2, size / 2), size / 2 - 2);
 		_grid.insertShape(sphereGenerator);
-		
-		_grid.render.updateBuffers(gl);
 	}
 
 	@Override

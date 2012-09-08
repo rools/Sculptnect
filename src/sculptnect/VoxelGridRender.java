@@ -1,5 +1,7 @@
 package sculptnect;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.util.HashSet;
 
@@ -16,12 +18,15 @@ public class VoxelGridRender {
 
 	VoxelGrid grid;
 	BufferCell[][][] bufferCells;
-	HashSet<BufferCell> dirtyCells;
+	HashSet<BufferCell> dirtyCells = new HashSet<BufferCell>();
+	HashSet<BufferCell> visibleCells = new HashSet<BufferCell>();
+
+	// Allocate a direct byte buffer large enough to hold a cell full of points
+	FloatBuffer floatBuffer = ByteBuffer
+			.allocateDirect(CELL_SIZE * CELL_SIZE * CELL_SIZE * 6 * 4)
+			.order(ByteOrder.nativeOrder()).asFloatBuffer();
 
 	Tuple3i dimensions = new Point3i();
-
-	int numVertices;
-	int[] _buffer = new int[1];
 
 	private class BufferCell {
 		// The position of this cell in the buffer grid
@@ -43,9 +48,6 @@ public class VoxelGridRender {
 
 	public VoxelGridRender(GL2 gl, VoxelGrid grid) {
 		this.grid = grid;
-
-		// Create buffer for point data
-		gl.glGenBuffers(1, _buffer, 0);
 
 		// Calculate buffer dimensions
 		dimensions.x = (int) Math.ceil((double) grid.width / CELL_SIZE);
@@ -79,7 +81,22 @@ public class VoxelGridRender {
 	}
 
 	public void markVoxelDirty(int x, int y, int z) {
+		BufferCell cell = bufferCells[x / CELL_SIZE][y / CELL_SIZE][z
+				/ CELL_SIZE];
+		if (cell.dirty)
+			return;
 
+		cell.dirty = true;
+		dirtyCells.add(cell);
+	}
+
+	public void updateDirtyCells(GL2 gl) {
+		for (BufferCell cell : dirtyCells) {
+			updateBufferCell(gl, cell);
+			cell.dirty = false;
+		}
+
+		dirtyCells.clear();
 	}
 
 	public void draw(GL2 gl) {
@@ -98,16 +115,19 @@ public class VoxelGridRender {
 		gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
 		gl.glEnableClientState(GL2.GL_NORMAL_ARRAY);
 
-		// Bind buffer containing voxel points and normals
-		gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, _buffer[0]);
+		// Loop through visible cells and draw them
+		for (BufferCell cell : visibleCells) {
+			// Bind buffer containing points and normals
+			gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, cell.bufferName);
 
-		// Specify vertex and normal data
-		int stride = Buffers.SIZEOF_FLOAT * 6;
-		gl.glVertexPointer(3, GL2.GL_FLOAT, stride, 0);
-		gl.glNormalPointer(GL2.GL_FLOAT, stride, Buffers.SIZEOF_FLOAT * 3);
+			// Specify vertex and normal data
+			int stride = Buffers.SIZEOF_FLOAT * 6;
+			gl.glVertexPointer(3, GL2.GL_FLOAT, stride, 0);
+			gl.glNormalPointer(GL2.GL_FLOAT, stride, Buffers.SIZEOF_FLOAT * 3);
 
-		// Draw the points
-		gl.glDrawArrays(GL2.GL_POINTS, 0, numVertices);
+			// Draw the points
+			gl.glDrawArrays(GL2.GL_POINTS, 0, cell.numIndices);
+		}
 
 		// Unbind the buffer data
 		gl.glBindBuffer(GL2.GL_ARRAY_BUFFER, 0);
@@ -115,12 +135,13 @@ public class VoxelGridRender {
 		// Disable vertex and normal arrays
 		gl.glDisableClientState(GL2.GL_NORMAL_ARRAY);
 		gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
-
 	}
 
-	Vector3f normalForVoxel(int x, int y, int z, Vector3f normal) {
+	private Vector3f normalForVoxel(int x, int y, int z, Vector3f normal) {
 		float numAdded = 0;
 		normal.set(0, 0, 0);
+
+		// Iterate through the 26 neighbors of the voxel
 		for (int xd = -1; xd < 2; xd++) {
 			for (int yd = -1; yd < 2; yd++) {
 				for (int zd = -1; zd < 2; zd++) {
@@ -132,6 +153,8 @@ public class VoxelGridRender {
 							&& yoff < grid.height && zoff >= 0
 							&& zoff < grid.depth) {
 						if (grid.isAir(xoff, yoff, zoff)) {
+							// If the neighbor voxel is empty, add the direction
+							// to it to the normal
 							normal.x += xd;
 							normal.y += yd;
 							normal.z += zd;
@@ -142,23 +165,22 @@ public class VoxelGridRender {
 			}
 		}
 
+		// Take the average of all summed vectors and normalize the result
 		normal.scale(1.0f / numAdded);
 		normal.normalize();
 
 		return normal;
 	}
 
-	void updateBuffers(GL2 gl) {
-		numVertices = 0;
-		// Each visible voxel needs 6 floats of storage - 3 coordinate, 3 normal
-		int bufferSize = grid.numVisibleVoxels * 6;
+	private void updateBufferCell(GL2 gl, BufferCell cell) {
+		cell.numIndices = 0;
 
-		FloatBuffer fb = FloatBuffer.allocate(bufferSize);
+		floatBuffer.clear();
 
 		Vector3f normal = new Vector3f();
-		for (int x = 0; x < grid.width; x++) {
-			for (int y = 0; y < grid.height; y++) {
-				for (int z = 0; z < grid.depth; z++) {
+		for (int x = cell.lowerIndices.x; x < cell.upperIndices.x; x++) {
+			for (int y = cell.lowerIndices.y; y < cell.upperIndices.y; y++) {
+				for (int z = cell.lowerIndices.z; z < cell.upperIndices.z; z++) {
 					// Skip voxel if it's empty
 					if (grid.isAir(x, y, z))
 						continue;
@@ -177,18 +199,18 @@ public class VoxelGridRender {
 						if (!inside
 								|| (grid.getVoxel(xoff, yoff, zoff) != grid
 										.getVoxel(x, y, z))) {
-							numVertices++;
+							cell.numIndices++;
 
-							// put vertex data into buffer
-							fb.put(x);
-							fb.put(y);
-							fb.put(z);
+							// Put vertex data into buffer
+							floatBuffer.put(x);
+							floatBuffer.put(y);
+							floatBuffer.put(z);
 
-							// put normal for the vertex into buffer
+							// Put normal for the vertex into buffer
 							Vector3f n = normalForVoxel(x, y, z, normal);
-							fb.put(n.x);
-							fb.put(n.y);
-							fb.put(n.z);
+							floatBuffer.put(n.x);
+							floatBuffer.put(n.y);
+							floatBuffer.put(n.z);
 
 							break;
 						}
@@ -197,13 +219,20 @@ public class VoxelGridRender {
 			}
 		}
 
-		fb.rewind();
+		// If this cell doesn't contain any points, remove it from the visible
+		// buffer cell set
+		if (cell.numIndices == 0) {
+			visibleCells.remove(cell);
+		} else {
+			visibleCells.add(cell);
+		}
 
-		System.out.println("Buffering " + numVertices * 6 + " floats");
+		floatBuffer.rewind();
 
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, _buffer[0]);
-		gl.glBufferData(GL.GL_ARRAY_BUFFER, numVertices * 6
-				* Buffers.SIZEOF_FLOAT, fb, GL.GL_STATIC_DRAW);
+		// Upload the vertex and normal data to the buffer
+		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, cell.bufferName);
+		gl.glBufferData(GL.GL_ARRAY_BUFFER, cell.numIndices * 6
+				* Buffers.SIZEOF_FLOAT, floatBuffer, GL.GL_STATIC_DRAW);
 		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
 	}
 }
