@@ -5,12 +5,14 @@ import javax.vecmath.Point3i;
 import sculptnect.VoxelGrid;
 
 public class SphereGenerator extends ShapeGenerator {
-	float _radius;
+	float radius;
+	byte value;
 
-	public SphereGenerator(Point3i center, float radius) {
+	public SphereGenerator(byte value, Point3i center, float radius) {
 		super(center, new Point3i((int) radius * 2, (int) radius * 2,
 				(int) radius * 2));
-		_radius = radius;
+		this.radius = radius;
+		this.value = value;
 	}
 
 	@Override
@@ -20,11 +22,14 @@ public class SphereGenerator extends ShapeGenerator {
 		float zp = z - getCenter().z;
 
 		float r = xp * xp + yp * yp + zp * zp;
-		if (r < _radius * _radius) {
-			return VoxelGrid.VOXEL_GRID_CLAY;
+		if (r < radius * radius) {
+			return value;
 		} else {
-			return VoxelGrid.VOXEL_GRID_AIR;
+			return VoxelGrid.VOXEL_GRID_NO_CHANGE;
 		}
 	}
 
+	public void setValue(byte value) {
+		this.value = value;
+	}
 }

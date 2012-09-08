@@ -49,8 +49,9 @@ public class SculptScene implements GLEventListener {
 		_grid = new VoxelGrid(gl, size);
 
 		// Add sphere shape to voxel grid
-		SphereGenerator sphereGenerator = new SphereGenerator(new Point3i(
-				size / 2, size / 2, size / 2), size / 2 - 2);
+		SphereGenerator sphereGenerator = new SphereGenerator(
+				VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2,
+						size / 2), size / 2 - 2);
 		_grid.insertShape(sphereGenerator);
 	}
 
@@ -76,6 +77,9 @@ public class SculptScene implements GLEventListener {
 	public void display(GLAutoDrawable drawable) {
 		GL2 gl = (GL2) drawable.getGL();
 
+		// Remove some material randomly
+		removeRandomSphere();
+
 		// Set default vertex color
 		gl.glColor3f(0.0f, 0.0f, 0.0f);
 
@@ -98,6 +102,7 @@ public class SculptScene implements GLEventListener {
 
 		// Draw coordinate axes
 		gl.glBegin(GL2.GL_LINES);
+		
 		// X
 		gl.glColor3f(1.0f, 0.0f, 0.0f);
 		gl.glVertex3f(0.0f, 0.0f, 0.0f);
@@ -124,6 +129,20 @@ public class SculptScene implements GLEventListener {
 
 		_rotation.x = Math.max((float) -Math.PI / 2.0f, _rotation.x);
 		_rotation.x = Math.min((float) Math.PI / 2.0f, _rotation.x);
+	}
+
+	public void removeRandomSphere() {
+		int size = (int) (Math.random() * 30);
+		Point3i center = new Point3i(
+				//
+				(int) (Math.random() * _grid.width),
+				(int) (Math.random() * _grid.height),
+				(int) (Math.random() * _grid.depth));
+
+		// Add sphere shape to voxel grid
+		SphereGenerator sphereGenerator = new SphereGenerator(
+				VoxelGrid.VOXEL_GRID_AIR, center, size);
+		_grid.insertShape(sphereGenerator);
 	}
 
 }

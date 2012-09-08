@@ -8,6 +8,7 @@ import javax.vecmath.Tuple3i;
 import shape.ShapeGenerator;
 
 public class VoxelGrid {
+	public static final byte VOXEL_GRID_NO_CHANGE = -1;
 	public static final byte VOXEL_GRID_AIR = 0;
 	public static final byte VOXEL_GRID_CLAY = 1;
 
@@ -73,18 +74,21 @@ public class VoxelGrid {
 		Tuple3i size = generator.getSize();
 
 		// Calculate bounds for the shape to insert
-		int xmin = center.x - size.x / 2;
-		int xmax = center.x + size.x / 2;
-		int ymin = center.y - size.y / 2;
-		int ymax = center.y + size.y / 2;
-		int zmin = center.z - size.z / 2;
-		int zmax = center.z + size.z / 2;
+		int xmin = Math.max(0, center.x - size.x / 2);
+		int xmax = Math.min(width, center.x + size.x / 2);
+		int ymin = Math.max(0, center.y - size.y / 2);
+		int ymax = Math.min(height, center.y + size.y / 2);
+		int zmin = Math.max(0, center.z - size.z / 2);
+		int zmax = Math.min(depth, center.z + size.z / 2);
 
 		// Iterate through the bounds and insert generated value
 		for (int x = xmin; x < xmax; x++) {
 			for (int y = ymin; y < ymax; y++) {
 				for (int z = zmin; z < zmax; z++) {
-					setVoxel(x, y, z, generator.valueForVoxel(x, y, z));
+					byte value = generator.valueForVoxel(x, y, z);
+					if (value != VOXEL_GRID_NO_CHANGE) {
+						setVoxel(x, y, z, value);
+					}
 				}
 			}
 		}
