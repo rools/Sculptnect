@@ -51,9 +51,6 @@ public class SculptScene implements GLEventListener {
 		SphereGenerator sphereGenerator = new SphereGenerator(new Point3i(
 				size / 2, size / 2, size / 2), size / 4);
 		_grid.insertShape(sphereGenerator);
-
-		// Update drawing data in voxel grid
-		_grid.updateBuffers(gl);
 	}
 
 	@Override
