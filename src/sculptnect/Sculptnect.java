@@ -9,7 +9,7 @@ import java.awt.event.WindowEvent;
 
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLProfile;
-import javax.media.opengl.awt.GLCanvas;
+import javax.media.opengl.awt.GLJPanel;
 
 import org.openkinect.freenect.Context;
 import org.openkinect.freenect.Device;
@@ -44,7 +44,8 @@ public class Sculptnect {
 		final SculptScene scene = new SculptScene();
 
 		// Create GLCanvas
-		GLCanvas canvas = new GLCanvas(caps);
+		//GLCanvas canvas = new GLCanvas(caps);
+		GLJPanel canvas = new GLJPanel(caps);
 		canvas.addGLEventListener(scene);
 		canvas.setFocusable(false);
 
