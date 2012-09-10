@@ -90,10 +90,13 @@ public class SculptScene implements GLEventListener {
 		// Move away from center
 		gl.glTranslatef(0.0f, 0.0f, -2.0f);
 
-		// Update voxelgrid rotation
-		_grid.setXRotation(_rotation.x);
-		_grid.setYRotation(_rotation.y);
+		// Scale down the grid to fit on screen
+		gl.glScalef(2.0f / _grid.width, 2.0f / _grid.height, 2.0f / _grid.depth);
 
+		// Rotate around x and y axes
+		gl.glRotatef(_rotation.x * 57.2957795f, 1.0f, 0.0f, 0.0f);
+		gl.glRotatef(_rotation.y * 57.2957795f, 0.0f, 1.0f, 0.0f);
+		
 		// Draw voxel grid
 		_grid.draw(gl);
 

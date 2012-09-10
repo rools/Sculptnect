@@ -1,8 +1,6 @@
 package sculptnect;
 
 import javax.media.opengl.GL2;
-import javax.vecmath.Point2f;
-import javax.vecmath.Tuple2f;
 import javax.vecmath.Tuple3i;
 
 import shape.ShapeGenerator;
@@ -16,7 +14,6 @@ public class VoxelGrid {
 
 	int width, height, depth;
 
-	Tuple2f rotation = new Point2f();
 	VoxelGridRender render;
 
 	public static int[][] offsets = {
@@ -92,14 +89,6 @@ public class VoxelGrid {
 				}
 			}
 		}
-	}
-
-	public void setXRotation(float xRotation) {
-		rotation.x = xRotation;
-	}
-
-	public void setYRotation(float yRotation) {
-		rotation.y = yRotation;
 	}
 
 	public void draw(GL2 gl) {

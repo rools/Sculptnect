@@ -100,13 +100,6 @@ public class VoxelGridRender {
 	}
 
 	public void draw(GL2 gl) {
-		// Scale down the grid to fit on screen
-		gl.glScalef(2.0f / grid.width, 2.0f / grid.height, 2.0f / grid.depth);
-
-		// Rotate around x and y axes
-		gl.glRotatef(grid.rotation.x * 57.2957795f, 1.0f, 0.0f, 0.0f);
-		gl.glRotatef(grid.rotation.y * 57.2957795f, 0.0f, 1.0f, 0.0f);
-
 		// Position grid around origin for rotation around center
 		gl.glTranslatef(-grid.width / 2.0f, -grid.height / 2.0f,
 				-grid.depth / 2.0f);
