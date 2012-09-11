@@ -101,8 +101,10 @@ public class VoxelGridRender {
 
 	public void draw(GL2 gl) {
 		// Position grid around origin for rotation around center
-		gl.glTranslatef(-grid.width / 2.0f, -grid.height / 2.0f,
-				-grid.depth / 2.0f);
+		//gl.glTranslatef(-grid.width / 2.0f, -grid.height / 2.0f,
+		//		-grid.depth / 2.0f);
+		
+		gl.glColor3f(0.3f, 0.3f, 0.3f);
 
 		// Enable the vertex and normal arrays
 		gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
