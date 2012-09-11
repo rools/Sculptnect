@@ -15,7 +15,7 @@ import shape.SphereGenerator;
 
 public class SculptScene implements GLEventListener {
 	private final int VOXEL_GRID_SIZE = 300;
-	private final short KINECT_NEAR_THRESHOLD = KinectUtils.metersToRawDepth(0.7f);
+	private final short KINECT_NEAR_THRESHOLD = KinectUtils.metersToRawDepth(0.5f);
 	private final short KINECT_FAR_THRESHOLD = KinectUtils.metersToRawDepth(1.4f);
 
 	private VoxelGrid _grid;
@@ -118,7 +118,7 @@ public class SculptScene implements GLEventListener {
 		// Draw Kinect depth map
 		gl.glPointSize(1.0f);
 		gl.glPushMatrix();
-		gl.glTranslatef(-320.0f, -240.0f, -400.0f);
+		gl.glTranslatef(-320.0f, -240.0f, -500.0f);
 		gl.glColor4f(0.3f, 0.0f, 0.0f, 1.0f);
 		gl.glBegin(GL.GL_POINTS);
 		for (int x = 0; x < 640; ++x) {
@@ -126,7 +126,7 @@ public class SculptScene implements GLEventListener {
 				if (depth[x][y] > 0.0f) {
 					gl.glColor4f(0.3f, 0.0f, 0.0f, depth[x][y]);
 					gl.glNormal3fv(depthNormals[x][y], 0);
-					gl.glVertex3f(x, 480 - y, depth[x][y] * 200);
+					gl.glVertex3f(x, 480 - y, depth[x][y] * 400);
 				}
 			}
 		}
