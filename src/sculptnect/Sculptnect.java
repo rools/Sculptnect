@@ -15,6 +15,7 @@ import java.util.Date;
 
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLProfile;
+import javax.media.opengl.awt.GLCanvas;
 import javax.media.opengl.awt.GLJPanel;
 
 import org.openkinect.freenect.Context;
@@ -23,7 +24,6 @@ import org.openkinect.freenect.Device;
 import org.openkinect.freenect.FrameMode;
 import org.openkinect.freenect.Freenect;
 
-import com.jogamp.opengl.swt.GLCanvas;
 import com.jogamp.opengl.util.FPSAnimator;
 
 public class Sculptnect {
@@ -41,32 +41,30 @@ public class Sculptnect {
 			System.err.println("Error, no Kinect detected.");
 		}
 
-		GLProfile glp = GLProfile.get(GLProfile.GL2);
+		GLProfile.initSingleton();
+		GLProfile glp = GLProfile.getDefault();
 
 		// Set the OpenGL canvas creation parameters
 		GLCapabilities caps = new GLCapabilities(glp);
 		caps.setRedBits(8);
 		caps.setGreenBits(8);
 		caps.setBlueBits(8);
-		caps.setDepthBits(32);
-		caps.setSampleBuffers(true);
-		caps.setNumSamples(4);
 
 		final SculptScene scene = new SculptScene();
 
 		// Create GLCanvas
-		GLJPanel panel = new GLJPanel(caps);
-		panel.addGLEventListener(scene);
-		panel.setFocusable(false);
+		GLCanvas canvas = new GLCanvas(caps);
+		canvas.addGLEventListener(scene);
+		canvas.setFocusable(false);
 
 		// Create new AWT window to contain the GLCanvas
 		Frame frame = new Frame("Sculptnect");
-		frame.add(panel);
+		frame.add(canvas);
 		frame.setSize(800, 800);
 		frame.setVisible(true);
 
 		// Add and start a display link
-		FPSAnimator animator = new FPSAnimator(panel, 60);
+		FPSAnimator animator = new FPSAnimator(canvas, 60);
 		animator.start();
 
 		// Add listener to respond to window closing
@@ -110,22 +108,20 @@ public class Sculptnect {
 		};
 
 		// Add the mouse listener
-		panel.addMouseMotionListener(mouseAdapter);
-		panel.addMouseListener(mouseAdapter);
+		canvas.addMouseMotionListener(mouseAdapter);
+		canvas.addMouseListener(mouseAdapter);
 
 		if (kinect != null) {
 			// kinect.setDepthFormat(DepthFormat.);
 			kinect.startDepth(new DepthHandler() {
 				@Override
-				public void onFrameReceived(FrameMode arg0, ByteBuffer arg1,
-						int arg2) {
+				public void onFrameReceived(FrameMode arg0, ByteBuffer arg1, int arg2) {
 					if (dump) {
 						// Dump a raw depth image
 						arg1.rewind();
 						FileOutputStream fos = null;
 						try {
-							fos = new FileOutputStream(new Date().getTime()
-									+ ".raw");
+							fos = new FileOutputStream(new Date().getTime() + ".raw");
 							while (arg1.remaining() > 0) {
 								fos.write(arg1.get());
 							}
@@ -142,8 +138,7 @@ public class Sculptnect {
 		} else {
 			// Load a placeholder depth image for testing without Kinect
 			try {
-				InputStream is = getClass().getClassLoader()
-						.getResourceAsStream("kinect_depth.raw");
+				InputStream is = getClass().getClassLoader().getResourceAsStream("kinect_depth.raw");
 				byte depth[] = new byte[640 * 480 * 2];
 				is.read(depth);
 				scene.updateKinect(ByteBuffer.wrap(depth));
