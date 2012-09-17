@@ -18,6 +18,7 @@ import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
 
 import org.openkinect.freenect.Context;
+import org.openkinect.freenect.DepthFormat;
 import org.openkinect.freenect.DepthHandler;
 import org.openkinect.freenect.Device;
 import org.openkinect.freenect.FrameMode;
@@ -30,6 +31,7 @@ public class Sculptnect {
 	private Device kinect = null;
 
 	private boolean dump = false;
+	private KinectDepthRecord depthRecord = null;
 
 	public Sculptnect() {
 		// Set up Kinect
@@ -76,13 +78,28 @@ public class Sculptnect {
 		// Add key listener
 		canvas.addKeyListener(new KeyAdapter() {
 			@Override
-			public void keyPressed(KeyEvent e) {
+			public void keyPressed(KeyEvent event) {
 				// Exit if ESC was pressed
-				if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+				if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
 					exit(0);
 				}
-				if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+				if (event.getKeyCode() == KeyEvent.VK_SPACE) {
 					dump = true;
+				}
+				if (event.getKeyCode() == 'R') {
+					if (depthRecord == null) {
+						try {
+							String file = new Date().getTime() + ".raw.gz";
+							depthRecord = new KinectDepthRecord(file);
+							System.out.println("Recording started to " + file);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					} else {
+						depthRecord.close();
+						depthRecord = null;
+						System.out.println("Recording stopped");
+					}
 				}
 			}
 		});
@@ -110,7 +127,7 @@ public class Sculptnect {
 		canvas.addMouseListener(mouseAdapter);
 
 		if (kinect != null) {
-			// kinect.setDepthFormat(DepthFormat.);
+			kinect.setDepthFormat(DepthFormat.D10BIT);
 			kinect.startDepth(new DepthHandler() {
 				@Override
 				public void onFrameReceived(FrameMode arg0, ByteBuffer arg1, int arg2) {
@@ -131,6 +148,14 @@ public class Sculptnect {
 					}
 
 					scene.updateKinect(arg1);
+
+					if (depthRecord != null) {
+						try {
+							depthRecord.addFrame(arg1);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
+					}
 				}
 			});
 		} else {
@@ -139,7 +164,8 @@ public class Sculptnect {
 				InputStream is = getClass().getClassLoader().getResourceAsStream("kinect_depth.raw");
 				byte depth[] = new byte[640 * 480 * 2];
 				is.read(depth);
-				scene.updateKinect(ByteBuffer.wrap(depth));
+				ByteBuffer byteBuffer = ByteBuffer.wrap(depth);
+				scene.updateKinect(byteBuffer);
 
 			} catch (IOException e1) {
 				e1.printStackTrace();

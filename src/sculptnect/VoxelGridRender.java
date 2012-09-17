@@ -89,16 +89,20 @@ public class VoxelGridRender {
 			return;
 
 		cell.dirty = true;
+		synchronized (dirtyCells) {
 		dirtyCells.add(cell);
+		}
 	}
 
 	public void updateDirtyCells(GL2 gl) {
-		for (BufferCell cell : dirtyCells) {
-			updateBufferCell(gl, cell);
-			cell.dirty = false;
+		synchronized (dirtyCells) {
+			for (BufferCell cell : dirtyCells) {
+				updateBufferCell(gl, cell);
+				cell.dirty = false;
+			}			
+			dirtyCells.clear();
 		}
 
-		dirtyCells.clear();
 	}
 
 	public void draw(GL2 gl) {
