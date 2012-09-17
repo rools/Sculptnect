@@ -11,12 +11,14 @@ import javax.media.opengl.glu.gl2.GLUgl2;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector2f;
 
+import shape.CubeGenerator;
 import shape.SphereGenerator;
 
 public class SculptScene implements GLEventListener {
-	private final int VOXEL_GRID_SIZE = 300;
+	private final int VOXEL_GRID_SIZE = 100;
 	private final short KINECT_NEAR_THRESHOLD = KinectUtils.metersToRawDepth(0.5f);
 	private final short KINECT_FAR_THRESHOLD = KinectUtils.metersToRawDepth(1.4f);
+	private final float KINECT_DEPTH_FACTOR = 400.0f;
 
 	private VoxelGrid _grid;
 
@@ -24,6 +26,8 @@ public class SculptScene implements GLEventListener {
 
 	private float depth[][] = new float[640][480];
 	private float depthNormals[][][] = new float[640][480][3];
+
+	private boolean collision = false;
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
@@ -62,8 +66,11 @@ public class SculptScene implements GLEventListener {
 		_grid = new VoxelGrid(gl, size);
 
 		// Add sphere shape to voxel grid
-		SphereGenerator sphereGenerator = new SphereGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2 - 2);
-		_grid.insertShape(sphereGenerator);
+		CubeGenerator generator = new CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2);
+		// SphereGenerator sphereGenerator = new
+		// SphereGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size
+		// / 2, size / 2), size / 2 - 2);
+		_grid.insertShape(generator);
 	}
 
 	@Override
@@ -88,7 +95,7 @@ public class SculptScene implements GLEventListener {
 		GL2 gl = (GL2) drawable.getGL();
 
 		// Remove some material randomly
-		removeRandomSphere();
+		// removeRandomSphere();
 
 		// Set default vertex color
 		gl.glColor3f(0.0f, 0.0f, 0.0f);
@@ -118,15 +125,14 @@ public class SculptScene implements GLEventListener {
 		// Draw Kinect depth map
 		gl.glPointSize(1.0f);
 		gl.glPushMatrix();
-		gl.glTranslatef(-320.0f, -240.0f, -500.0f);
-		gl.glColor4f(0.3f, 0.0f, 0.0f, 1.0f);
+		gl.glTranslatef(-320.0f, -240.0f, -KINECT_DEPTH_FACTOR + VOXEL_GRID_SIZE * 0.5f);
 		gl.glBegin(GL.GL_POINTS);
 		for (int x = 0; x < 640; ++x) {
 			for (int y = 0; y < 480; ++y) {
 				if (depth[x][y] > 0.0f) {
-					gl.glColor4f(0.3f, 0.0f, 0.0f, depth[x][y]);
+					gl.glColor4f(0.3f, collision ? 0.3f : 0.0f, 0.0f, depth[x][y]);
 					gl.glNormal3fv(depthNormals[x][y], 0);
-					gl.glVertex3f(x, 480 - y, depth[x][y] * 400);
+					gl.glVertex3f(x, 480 - y, depth[x][y] * KINECT_DEPTH_FACTOR);
 				}
 			}
 		}
@@ -181,21 +187,34 @@ public class SculptScene implements GLEventListener {
 	public void updateKinect(ByteBuffer depthBuffer) {
 		depthBuffer.rewind();
 		depthBuffer.order(ByteOrder.LITTLE_ENDIAN);
-		float max = 0.0f;
-		float min = 100.0f;
+
+		collision = false;
+
 		for (int y = 0; y < 480; ++y) {
 			for (int x = 0; x < 640; ++x) {
 				short rawDepth = depthBuffer.getShort();
-				if (rawDepth < KINECT_NEAR_THRESHOLD || rawDepth > KINECT_FAR_THRESHOLD)
+				if (rawDepth < KINECT_NEAR_THRESHOLD || rawDepth > KINECT_FAR_THRESHOLD) {
 					depth[x][y] = 0.0f;
-				else
+				} else {
 					depth[x][y] = (KINECT_FAR_THRESHOLD - rawDepth) / (float) (KINECT_FAR_THRESHOLD - KINECT_NEAR_THRESHOLD);
 
-				if (depth[x][y] > max)
-					max = depth[x][y];
-				if (depth[x][y] < min)
-					min = depth[x][y];
+					// Perform collision detection
+					int xPos = x - 320 + VOXEL_GRID_SIZE / 2;
+					int yPos = y - 240 + VOXEL_GRID_SIZE / 2;
+					int zPos = (int) (depth[x][y] * KINECT_DEPTH_FACTOR);
 
+					yPos = (int) (VOXEL_GRID_SIZE - yPos);
+					zPos -= (KINECT_DEPTH_FACTOR - VOXEL_GRID_SIZE);
+
+					// Check whether the point is within the bounding box of the
+					// model
+					if (zPos >= 0 && xPos >= 0 && xPos < VOXEL_GRID_SIZE && yPos >= 0 && yPos < VOXEL_GRID_SIZE) {
+
+						_grid.setVoxel(xPos, yPos, zPos, VoxelGrid.VOXEL_GRID_AIR);
+
+						collision = true;
+					}
+				}
 			}
 		}
 
