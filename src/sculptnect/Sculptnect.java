@@ -1,5 +1,12 @@
 package sculptnect;
 
+import java.awt.Frame;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,6 +15,7 @@ import java.util.Date;
 
 import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLProfile;
+import javax.media.opengl.awt.GLCanvas;
 
 import org.openkinect.freenect.Context;
 import org.openkinect.freenect.DepthHandler;
@@ -15,13 +23,6 @@ import org.openkinect.freenect.Device;
 import org.openkinect.freenect.FrameMode;
 import org.openkinect.freenect.Freenect;
 
-import com.jogamp.newt.event.KeyAdapter;
-import com.jogamp.newt.event.KeyEvent;
-import com.jogamp.newt.event.MouseAdapter;
-import com.jogamp.newt.event.MouseEvent;
-import com.jogamp.newt.event.WindowAdapter;
-import com.jogamp.newt.event.WindowEvent;
-import com.jogamp.newt.opengl.GLWindow;
 import com.jogamp.opengl.util.FPSAnimator;
 
 public class Sculptnect {
@@ -50,26 +51,30 @@ public class Sculptnect {
 
 		final SculptScene scene = new SculptScene();
 
-		GLWindow window = GLWindow.create(caps);
-		window.addGLEventListener(scene);
+		final Frame frame = new Frame();
+		GLCanvas canvas = new GLCanvas(caps);
+		canvas.addGLEventListener(scene);
 
 		// Add and start a display link
-		final FPSAnimator animator = new FPSAnimator(window, 60, true);
+		final FPSAnimator animator = new FPSAnimator(canvas, 60, true);
 
-		window.setSize(800, 800);
-		window.setVisible(true);
+		frame.add(canvas);
+		frame.setSize(800, 800);
+		frame.setVisible(true);
+		canvas.requestFocus();
 		animator.start();
 
 		// Add listener to respond to window closing
-		window.addWindowListener(new WindowAdapter() {
+		frame.addWindowListener(new WindowAdapter() {
 			@Override
-			public void windowDestroyNotify(WindowEvent arg0) {
+			public void windowClosing(WindowEvent e) {
+				super.windowClosing(e);
 				exit(0);
 			}
 		});
 
 		// Add key listener
-		window.addKeyListener(new KeyAdapter() {
+		canvas.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent e) {
 				// Exit if ESC was pressed
@@ -101,7 +106,8 @@ public class Sculptnect {
 		};
 
 		// Add the mouse listener
-		window.addMouseListener(mouseAdapter);
+		canvas.addMouseMotionListener(mouseAdapter);
+		canvas.addMouseListener(mouseAdapter);
 
 		if (kinect != null) {
 			// kinect.setDepthFormat(DepthFormat.);
