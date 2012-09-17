@@ -3,7 +3,9 @@ package sculptnect;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.Set;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
@@ -18,9 +20,9 @@ public class VoxelGridRender {
 
 	VoxelGrid grid;
 	BufferCell[][][] bufferCells;
-	HashSet<BufferCell> dirtyCells = new HashSet<BufferCell>();
-	HashSet<BufferCell> visibleCells = new HashSet<BufferCell>();
-
+	Set<BufferCell> dirtyCells = Collections.synchronizedSet(new HashSet<BufferCell>());
+	Set<BufferCell> visibleCells = new HashSet<BufferCell>();
+	
 	// Allocate a direct byte buffer large enough to hold a cell full of points
 	FloatBuffer floatBuffer = ByteBuffer
 			.allocateDirect(CELL_SIZE * CELL_SIZE * CELL_SIZE * 6 * 4)
