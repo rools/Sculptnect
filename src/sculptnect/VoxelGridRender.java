@@ -21,7 +21,7 @@ import com.jogamp.common.nio.Buffers;
 
 public class VoxelGridRender {
 	private static final int CELL_SIZE = 64;
-	private static final int NUM_THREADS = 4;
+	private static final int NUM_THREADS = 8;
 
 	VoxelGrid grid;
 	BufferCell[][][] bufferCells;
@@ -33,9 +33,6 @@ public class VoxelGridRender {
 	BlockingQueue<BufferCell> waitingBufferCellQueue = new ArrayBlockingQueue<VoxelGridRender.BufferCell>(1000);
 	BlockingQueue<BufferCell> completedBufferCellQueue = new ArrayBlockingQueue<VoxelGridRender.BufferCell>(1000);
 	BlockingQueue<FloatBuffer> floatBufferQueue = new ArrayBlockingQueue<FloatBuffer>(NUM_THREADS, false);
-
-	// Allocate a direct byte buffer large enough to hold a cell full of points
-	FloatBuffer floatBuffer = ByteBuffer.allocateDirect(CELL_SIZE * CELL_SIZE * CELL_SIZE * 6 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
 
 	Tuple3i dimensions = new Point3i();
 
@@ -55,9 +52,6 @@ public class VoxelGridRender {
 
 		// Float buffer (temporarily) containing this buffer cell's point data
 		FloatBuffer floatBuffer;
-
-		// Marks this cell as dirty or not
-		boolean dirty;
 	}
 
 	private class BufferCellPointCreator implements Runnable {
@@ -74,11 +68,11 @@ public class VoxelGridRender {
 			try {
 				while (true) {
 					BufferCell cell = waitingBufferCellQueue.take();
-					cell.numIndices = 0;
 
 					FloatBuffer floatBuffer = floatBufferQueue.take();
 					floatBuffer.clear();
 
+					cell.numIndices = 0;
 					for (int x = cell.lowerIndices.x; x < cell.upperIndices.x; x++) {
 						for (int y = cell.lowerIndices.y; y < cell.upperIndices.y; y++) {
 							for (int z = cell.lowerIndices.z; z < cell.upperIndices.z; z++) {
@@ -198,18 +192,19 @@ public class VoxelGridRender {
 
 	public void markVoxelDirty(int x, int y, int z) {
 		BufferCell cell = bufferCells[x / CELL_SIZE][y / CELL_SIZE][z / CELL_SIZE];
-		if (cell.dirty)
-			return;
-
-		cell.dirty = true;
 
 		dirtyCells.add(cell);
 	}
 
 	public void updateDirtyCells(GL2 gl) {
 		int count = 0;
-		for (BufferCell cell : dirtyCells) {
-			count += (waitingBufferCellQueue.offer(cell) ? 1 : 0);
+		synchronized (dirtyCells) {
+			for (BufferCell cell : dirtyCells) {
+				boolean taken = waitingBufferCellQueue.offer(cell);
+				count += (taken ? 1 : 0);
+			}
+
+			dirtyCells.clear();
 		}
 
 		for (int i = 0; i < count; i++) {
@@ -224,16 +219,15 @@ public class VoxelGridRender {
 					visibleCells.add(cell);
 				}
 
-				// Upload the vertex and normal data to the buffer
-				gl.glBindBuffer(GL.GL_ARRAY_BUFFER, cell.bufferName);
-				gl.glBufferData(GL.GL_ARRAY_BUFFER, cell.numIndices * 6 * Buffers.SIZEOF_FLOAT, cell.floatBuffer, GL.GL_STATIC_DRAW);
-				gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
-
 				FloatBuffer floatBuffer = cell.floatBuffer;
 				cell.floatBuffer = null;
-				floatBufferQueue.offer(floatBuffer);
 
-				cell.dirty = false;
+				// Upload the vertex and normal data to the buffer
+				gl.glBindBuffer(GL.GL_ARRAY_BUFFER, cell.bufferName);
+				gl.glBufferData(GL.GL_ARRAY_BUFFER, cell.numIndices * 6 * Buffers.SIZEOF_FLOAT, floatBuffer, GL.GL_STATIC_DRAW);
+				gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
+
+				floatBufferQueue.offer(floatBuffer);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

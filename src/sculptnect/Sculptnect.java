@@ -101,6 +101,9 @@ public class Sculptnect {
 						System.out.println("Recording stopped");
 					}
 				}
+				if (event.getKeyCode() == 'O') {
+					scene.removeRandomSphere();
+				}
 			}
 		});
 
