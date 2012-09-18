@@ -2,6 +2,7 @@ package sculptnect;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Random;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
@@ -11,11 +12,10 @@ import javax.media.opengl.glu.gl2.GLUgl2;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector2f;
 
-import shape.CubeGenerator;
 import shape.SphereGenerator;
 
 public class SculptScene implements GLEventListener {
-	private final int VOXEL_GRID_SIZE = 100;
+	private final int VOXEL_GRID_SIZE = 300;
 	private final short KINECT_NEAR_THRESHOLD = KinectUtils.metersToRawDepth(0.5f);
 	private final short KINECT_FAR_THRESHOLD = KinectUtils.metersToRawDepth(1.4f);
 	private final float KINECT_DEPTH_FACTOR = 400.0f;
@@ -66,10 +66,10 @@ public class SculptScene implements GLEventListener {
 		_grid = new VoxelGrid(gl, size);
 
 		// Add sphere shape to voxel grid
-		CubeGenerator generator = new CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2);
-		// SphereGenerator sphereGenerator = new
-		// SphereGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size
-		// / 2, size / 2), size / 2 - 2);
+		//CubeGenerator generator = new CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2);
+		 SphereGenerator generator = new
+		 SphereGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size
+		 / 2, size / 2), size / 2 - 2);
 		_grid.insertShape(generator);
 	}
 
@@ -95,7 +95,7 @@ public class SculptScene implements GLEventListener {
 		GL2 gl = (GL2) drawable.getGL();
 
 		// Remove some material randomly
-		// removeRandomSphere();
+		 removeRandomSphere();
 
 		// Set default vertex color
 		gl.glColor3f(0.0f, 0.0f, 0.0f);
@@ -173,11 +173,12 @@ public class SculptScene implements GLEventListener {
 		_rotation.x = Math.min((float) Math.PI / 2.0f, _rotation.x);
 	}
 
+	Random random = new Random(1);
 	public void removeRandomSphere() {
-		int size = (int) (Math.random() * 30);
+		int size = (int) (random.nextDouble() * 30);
 		Point3i center = new Point3i(
 		//
-				(int) (Math.random() * _grid.width), (int) (Math.random() * _grid.height), (int) (Math.random() * _grid.depth));
+				(int) (random.nextDouble() * _grid.width), (int) (random.nextDouble() * _grid.height), (int) (random.nextDouble() * _grid.depth));
 
 		// Add sphere shape to voxel grid
 		SphereGenerator sphereGenerator = new SphereGenerator(VoxelGrid.VOXEL_GRID_AIR, center, size);
