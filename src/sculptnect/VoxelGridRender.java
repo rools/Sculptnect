@@ -6,6 +6,10 @@ import java.nio.FloatBuffer;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
@@ -17,16 +21,21 @@ import com.jogamp.common.nio.Buffers;
 
 public class VoxelGridRender {
 	private static final int CELL_SIZE = 64;
+	private static final int NUM_THREADS = 4;
 
 	VoxelGrid grid;
 	BufferCell[][][] bufferCells;
 	Set<BufferCell> dirtyCells = Collections.synchronizedSet(new HashSet<BufferCell>());
 	Set<BufferCell> visibleCells = new HashSet<BufferCell>();
-	
+
+	ExecutorService executor = Executors.newFixedThreadPool(NUM_THREADS);
+
+	BlockingQueue<BufferCell> waitingBufferCellQueue = new ArrayBlockingQueue<VoxelGridRender.BufferCell>(1000);
+	BlockingQueue<BufferCell> completedBufferCellQueue = new ArrayBlockingQueue<VoxelGridRender.BufferCell>(1000);
+	BlockingQueue<FloatBuffer> floatBufferQueue = new ArrayBlockingQueue<FloatBuffer>(NUM_THREADS, false);
+
 	// Allocate a direct byte buffer large enough to hold a cell full of points
-	FloatBuffer floatBuffer = ByteBuffer
-			.allocateDirect(CELL_SIZE * CELL_SIZE * CELL_SIZE * 6 * 4)
-			.order(ByteOrder.nativeOrder()).asFloatBuffer();
+	FloatBuffer floatBuffer = ByteBuffer.allocateDirect(CELL_SIZE * CELL_SIZE * CELL_SIZE * 6 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
 
 	Tuple3i dimensions = new Point3i();
 
@@ -44,12 +53,121 @@ public class VoxelGridRender {
 		// The number of indices this buffer object contains
 		int numIndices;
 
+		// Float buffer (temporarily) containing this buffer cell's point data
+		FloatBuffer floatBuffer;
+
 		// Marks this cell as dirty or not
 		boolean dirty;
 	}
 
+	private class BufferCellPointCreator implements Runnable {
+		VoxelGrid grid;
+
+		Vector3f normal = new Vector3f();
+
+		public BufferCellPointCreator(VoxelGrid grid) {
+			this.grid = grid;
+		}
+
+		@Override
+		public void run() {
+			try {
+				while (true) {
+					BufferCell cell = waitingBufferCellQueue.take();
+					cell.numIndices = 0;
+
+					FloatBuffer floatBuffer = floatBufferQueue.take();
+					floatBuffer.clear();
+
+					for (int x = cell.lowerIndices.x; x < cell.upperIndices.x; x++) {
+						for (int y = cell.lowerIndices.y; y < cell.upperIndices.y; y++) {
+							for (int z = cell.lowerIndices.z; z < cell.upperIndices.z; z++) {
+								// Skip voxel if it's empty
+								if (grid.isAir(x, y, z))
+									continue;
+
+								// Determine if voxel is completely inside by
+								// examining its neighbors
+								for (int i = 0; i < 6; i++) {
+									int[] offset = VoxelGrid.offsets[i];
+									int xoff = x + offset[0];
+									int yoff = y + offset[1];
+									int zoff = z + offset[2];
+
+									boolean inside = xoff >= 0 && xoff < grid.width && yoff >= 0 && yoff < grid.height && zoff >= 0 && zoff < grid.depth;
+									if (!inside || (grid.getVoxel(xoff, yoff, zoff) != grid.getVoxel(x, y, z))) {
+										cell.numIndices++;
+
+										// Put vertex data into buffer
+										floatBuffer.put(x);
+										floatBuffer.put(y);
+										floatBuffer.put(z);
+
+										// Put normal for the vertex into buffer
+										Vector3f n = this.normalForVoxel(x, y, z, normal);
+										floatBuffer.put(n.x);
+										floatBuffer.put(n.y);
+										floatBuffer.put(n.z);
+
+										break;
+									}
+								}
+							}
+						}
+					}
+
+					floatBuffer.rewind();
+					cell.floatBuffer = floatBuffer;
+					completedBufferCellQueue.put(cell);
+				}
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		private Vector3f normalForVoxel(int x, int y, int z, Vector3f normal) {
+			float numAdded = 0;
+			normal.set(0, 0, 0);
+
+			// Iterate through the 26 neighbors of the voxel
+			for (int xd = -1; xd < 2; xd++) {
+				for (int yd = -1; yd < 2; yd++) {
+					for (int zd = -1; zd < 2; zd++) {
+						int xoff = x + xd;
+						int yoff = y + yd;
+						int zoff = z + zd;
+
+						if (xoff >= 0 && xoff < grid.width && yoff >= 0 && yoff < grid.height && zoff >= 0 && zoff < grid.depth) {
+							if (grid.isAir(xoff, yoff, zoff)) {
+								// If the neighbor voxel is empty, add the
+								// direction
+								// to it to the normal
+								normal.x += xd;
+								normal.y += yd;
+								normal.z += zd;
+								numAdded++;
+							}
+						}
+					}
+				}
+			}
+
+			// Take the average of all summed vectors and normalize the result
+			normal.scale(1.0f / numAdded);
+			normal.normalize();
+
+			return normal;
+		}
+	}
+
 	public VoxelGridRender(GL2 gl, VoxelGrid grid) {
 		this.grid = grid;
+
+		// Add floatbuffers to queue, and add BufferCell creators to executor
+		for (int i = 0; i < NUM_THREADS; i++) {
+			floatBufferQueue.offer(ByteBuffer.allocateDirect(CELL_SIZE * CELL_SIZE * CELL_SIZE * 6 * 4).order(ByteOrder.nativeOrder()).asFloatBuffer());
+			executor.submit(new BufferCellPointCreator(grid));
+		}
 
 		// Calculate buffer dimensions
 		dimensions.x = (int) Math.ceil((double) grid.width / CELL_SIZE);
@@ -66,12 +184,8 @@ public class VoxelGridRender {
 
 					// Set cell position and indices bounds
 					cell.position.set(x, y, z);
-					cell.lowerIndices.set(x * CELL_SIZE, y * CELL_SIZE, z
-							* CELL_SIZE);
-					cell.upperIndices.set(
-							Math.min((x + 1) * CELL_SIZE, grid.width),
-							Math.min((y + 1) * CELL_SIZE, grid.height),
-							Math.min((z + 1) * CELL_SIZE, grid.depth));
+					cell.lowerIndices.set(x * CELL_SIZE, y * CELL_SIZE, z * CELL_SIZE);
+					cell.upperIndices.set(Math.min((x + 1) * CELL_SIZE, grid.width), Math.min((y + 1) * CELL_SIZE, grid.height), Math.min((z + 1) * CELL_SIZE, grid.depth));
 
 					// Generate and set a buffer object name for this cell
 					int[] buf = new int[1];
@@ -83,34 +197,53 @@ public class VoxelGridRender {
 	}
 
 	public void markVoxelDirty(int x, int y, int z) {
-		BufferCell cell = bufferCells[x / CELL_SIZE][y / CELL_SIZE][z
-				/ CELL_SIZE];
+		BufferCell cell = bufferCells[x / CELL_SIZE][y / CELL_SIZE][z / CELL_SIZE];
 		if (cell.dirty)
 			return;
 
 		cell.dirty = true;
-		synchronized (dirtyCells) {
+
 		dirtyCells.add(cell);
-		}
 	}
 
 	public void updateDirtyCells(GL2 gl) {
-		synchronized (dirtyCells) {
-			for (BufferCell cell : dirtyCells) {
-				updateBufferCell(gl, cell);
-				cell.dirty = false;
-			}			
-			dirtyCells.clear();
+		int count = 0;
+		for (BufferCell cell : dirtyCells) {
+			count += (waitingBufferCellQueue.offer(cell) ? 1 : 0);
 		}
 
+		for (int i = 0; i < count; i++) {
+			try {
+				BufferCell cell = completedBufferCellQueue.take();
+
+				// If this cell doesn't contain any points, remove it from the
+				// visible buffer cell set
+				if (cell.numIndices == 0) {
+					visibleCells.remove(cell);
+				} else {
+					visibleCells.add(cell);
+				}
+
+				// Upload the vertex and normal data to the buffer
+				gl.glBindBuffer(GL.GL_ARRAY_BUFFER, cell.bufferName);
+				gl.glBufferData(GL.GL_ARRAY_BUFFER, cell.numIndices * 6 * Buffers.SIZEOF_FLOAT, cell.floatBuffer, GL.GL_STATIC_DRAW);
+				gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
+
+				FloatBuffer floatBuffer = cell.floatBuffer;
+				cell.floatBuffer = null;
+				floatBufferQueue.offer(floatBuffer);
+
+				cell.dirty = false;
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+
+		dirtyCells.clear();
 	}
 
 	public void draw(GL2 gl) {
-		// Position grid around origin for rotation around center
-		//gl.glTranslatef(-grid.width / 2.0f, -grid.height / 2.0f,
-		//		-grid.depth / 2.0f);
-		
-		gl.glColor3f(0.3f, 0.3f, 0.3f);
+		gl.glColor3f(0.4f, 0.4f, 0.4f);
 
 		// Enable the vertex and normal arrays
 		gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
@@ -136,104 +269,5 @@ public class VoxelGridRender {
 		// Disable vertex and normal arrays
 		gl.glDisableClientState(GL2.GL_NORMAL_ARRAY);
 		gl.glDisableClientState(GL2.GL_VERTEX_ARRAY);
-	}
-
-	private Vector3f normalForVoxel(int x, int y, int z, Vector3f normal) {
-		float numAdded = 0;
-		normal.set(0, 0, 0);
-
-		// Iterate through the 26 neighbors of the voxel
-		for (int xd = -1; xd < 2; xd++) {
-			for (int yd = -1; yd < 2; yd++) {
-				for (int zd = -1; zd < 2; zd++) {
-					int xoff = x + xd;
-					int yoff = y + yd;
-					int zoff = z + zd;
-
-					if (xoff >= 0 && xoff < grid.width && yoff >= 0
-							&& yoff < grid.height && zoff >= 0
-							&& zoff < grid.depth) {
-						if (grid.isAir(xoff, yoff, zoff)) {
-							// If the neighbor voxel is empty, add the direction
-							// to it to the normal
-							normal.x += xd;
-							normal.y += yd;
-							normal.z += zd;
-							numAdded++;
-						}
-					}
-				}
-			}
-		}
-
-		// Take the average of all summed vectors and normalize the result
-		normal.scale(1.0f / numAdded);
-		normal.normalize();
-
-		return normal;
-	}
-
-	private void updateBufferCell(GL2 gl, BufferCell cell) {
-		cell.numIndices = 0;
-
-		floatBuffer.clear();
-
-		Vector3f normal = new Vector3f();
-		for (int x = cell.lowerIndices.x; x < cell.upperIndices.x; x++) {
-			for (int y = cell.lowerIndices.y; y < cell.upperIndices.y; y++) {
-				for (int z = cell.lowerIndices.z; z < cell.upperIndices.z; z++) {
-					// Skip voxel if it's empty
-					if (grid.isAir(x, y, z))
-						continue;
-
-					// Determine if voxel is completely inside by
-					// examining its neighbors
-					for (int i = 0; i < 6; i++) {
-						int[] offset = VoxelGrid.offsets[i];
-						int xoff = x + offset[0];
-						int yoff = y + offset[1];
-						int zoff = z + offset[2];
-
-						boolean inside = xoff >= 0 && xoff < grid.width
-								&& yoff >= 0 && yoff < grid.height && zoff >= 0
-								&& zoff < grid.depth;
-						if (!inside
-								|| (grid.getVoxel(xoff, yoff, zoff) != grid
-										.getVoxel(x, y, z))) {
-							cell.numIndices++;
-
-							// Put vertex data into buffer
-							floatBuffer.put(x);
-							floatBuffer.put(y);
-							floatBuffer.put(z);
-
-							// Put normal for the vertex into buffer
-							Vector3f n = normalForVoxel(x, y, z, normal);
-							floatBuffer.put(n.x);
-							floatBuffer.put(n.y);
-							floatBuffer.put(n.z);
-
-							break;
-						}
-					}
-				}
-			}
-		}
-
-		// If this cell doesn't contain any points, remove it from the visible
-		// buffer cell set
-		if (cell.numIndices == 0) {
-			visibleCells.remove(cell);
-		} else {
-			visibleCells.add(cell);
-		}
-
-		floatBuffer.rewind();
-
-		// Upload the vertex and normal data to the buffer
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, cell.bufferName);
-		gl.glBufferData(GL.GL_ARRAY_BUFFER, cell.numIndices * 6
-				* Buffers.SIZEOF_FLOAT, floatBuffer, GL.GL_STATIC_DRAW);
-		gl.glBindBuffer(GL.GL_ARRAY_BUFFER, 0);
 	}
 }
