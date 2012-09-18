@@ -15,7 +15,7 @@ import shape.CubeGenerator;
 import shape.SphereGenerator;
 
 public class SculptScene implements GLEventListener {
-	private final int VOXEL_GRID_SIZE = 100;
+	private final int VOXEL_GRID_SIZE = 200;
 	private final short KINECT_NEAR_THRESHOLD = KinectUtils.metersToRawDepth(0.5f);
 	private final short KINECT_FAR_THRESHOLD = KinectUtils.metersToRawDepth(1.4f);
 	private final float KINECT_DEPTH_FACTOR = 400.0f;
@@ -188,8 +188,6 @@ public class SculptScene implements GLEventListener {
 		depthBuffer.rewind();
 		depthBuffer.order(ByteOrder.LITTLE_ENDIAN);
 
-		collision = false;
-
 		for (int y = 0; y < 480; ++y) {
 			for (int x = 0; x < 640; ++x) {
 				short rawDepth = depthBuffer.getShort();
@@ -208,11 +206,12 @@ public class SculptScene implements GLEventListener {
 
 					// Check whether the point is within the bounding box of the
 					// model
-					if (zPos >= 0 && xPos >= 0 && xPos < VOXEL_GRID_SIZE && yPos >= 0 && yPos < VOXEL_GRID_SIZE) {
+					if (xPos >= 0 && xPos < VOXEL_GRID_SIZE && yPos >= 0 && yPos < VOXEL_GRID_SIZE) {
 
-						_grid.setVoxel(xPos, yPos, zPos, VoxelGrid.VOXEL_GRID_AIR);
+						for (int i = 0; i < 10 && zPos >= 0; i++, zPos--) {
+							_grid.setVoxel(xPos, yPos, zPos, VoxelGrid.VOXEL_GRID_AIR);
+						}
 
-						collision = true;
 					}
 				}
 			}
