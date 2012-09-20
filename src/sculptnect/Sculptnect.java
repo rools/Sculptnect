@@ -107,6 +107,9 @@ public class Sculptnect {
 				} else if (event.getKeyCode() == KeyEvent.VK_DOWN) {
 					scene.modifyModelRotationX(-1.0f);
 				}
+				if (event.getKeyCode() == 'O') {
+					scene.removeRandomSphere();
+				}
 			}
 		});
 
