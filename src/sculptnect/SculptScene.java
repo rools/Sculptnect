@@ -22,7 +22,7 @@ public class SculptScene implements GLEventListener {
 
 	private VoxelGrid _grid;
 
-	private Vector2f _rotation = new Vector2f((float) Math.PI * 0.5f, (float) Math.PI);
+	private Vector2f _rotation = new Vector2f((float) Math.PI * 0.25f, (float) Math.PI * 0.9f);
 
 	private float filteredDepth[][] = new float[640][480];
 	private float depth[][] = new float[640][480];
@@ -114,8 +114,8 @@ public class SculptScene implements GLEventListener {
 		// Draw voxel grid
 		gl.glPointSize(4.0f);
 		gl.glPushMatrix();
-		gl.glRotatef(modelRotationX, 1.0f, 0.0f, 0.0f);
-		gl.glRotatef(modelRotationY, 0.0f, 1.0f, 0.0f);
+		gl.glRotatef(modelRotationY, 0.0f, -1.0f, 0.0f);
+		gl.glRotatef(modelRotationX, -1.0f, 0.0f, 0.0f);
 		gl.glTranslatef(-VOXEL_GRID_SIZE * 0.5f, -VOXEL_GRID_SIZE * 0.5f, -VOXEL_GRID_SIZE * 0.5f);
 		_grid.draw(gl);
 		gl.glPopMatrix();
@@ -202,14 +202,14 @@ public class SculptScene implements GLEventListener {
 				filteredDepth[x][y] = depth[x][y];
 
 				for (int i = 0; i < 30; ++i) {
-					float xVal = x - 320;
-					float yVal = (479 - y) - 240;
-					float zVal = filteredDepth[x][y] * KINECT_DEPTH_FACTOR - KINECT_DEPTH_FACTOR * 0.5f - i;
+					float xOrig = x - 320;
+					float yOrig = (479 - y) - 240;
+					float zOrig = filteredDepth[x][y] * KINECT_DEPTH_FACTOR - KINECT_DEPTH_FACTOR * 0.5f - i;
 
 					// Rotate the points the same amount that the model is rotated
-					float xValOrg = xVal;
-					xVal = (float) (xVal * SculptMath.cos(modelRotationY) - zVal * SculptMath.sin(modelRotationY));
-					zVal = (float) (xValOrg * SculptMath.sin(modelRotationY) + zVal * SculptMath.cos(modelRotationY));
+					float xVal = (float) (xOrig * SculptMath.cos(modelRotationY) + zOrig * SculptMath.sin(modelRotationY));
+					float yVal = (float) (xOrig * SculptMath.sin(modelRotationX) * SculptMath.sin(modelRotationY) + yOrig * SculptMath.cos(modelRotationX) - zOrig * SculptMath.sin(modelRotationX) * SculptMath.cos(modelRotationY));
+					float zVal = (float) (-xOrig * SculptMath.sin(modelRotationY) * SculptMath.cos(modelRotationX) + yOrig * SculptMath.sin(modelRotationX) + zOrig * SculptMath.cos(modelRotationX) * SculptMath.cos(modelRotationY));
 
 					int xPos = (int) (xVal + VOXEL_GRID_SIZE / 2);
 					int yPos = (int) (yVal + VOXEL_GRID_SIZE / 2);
