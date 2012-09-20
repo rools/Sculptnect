@@ -82,11 +82,9 @@ public class Sculptnect {
 				// Exit if ESC was pressed
 				if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
 					exit(0);
-				}
-				if (event.getKeyCode() == KeyEvent.VK_SPACE) {
+				} else if (event.getKeyCode() == KeyEvent.VK_SPACE) {
 					dump = true;
-				}
-				if (event.getKeyCode() == 'R') {
+				} else if (event.getKeyCode() == 'R') {
 					if (depthRecord == null) {
 						try {
 							String file = new Date().getTime() + ".raw.gz";
@@ -100,6 +98,14 @@ public class Sculptnect {
 						depthRecord = null;
 						System.out.println("Recording stopped");
 					}
+				} else if (event.getKeyCode() == KeyEvent.VK_LEFT) {
+					scene.modifyModelRotationY(-1.0f);
+				} else if (event.getKeyCode() == KeyEvent.VK_RIGHT) {
+					scene.modifyModelRotationY(1.0f);
+				} else if (event.getKeyCode() == KeyEvent.VK_UP) {
+					scene.modifyModelRotationX(1.0f);
+				} else if (event.getKeyCode() == KeyEvent.VK_DOWN) {
+					scene.modifyModelRotationX(-1.0f);
 				}
 			}
 		});
