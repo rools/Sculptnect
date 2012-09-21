@@ -128,8 +128,9 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		// Draw voxel grid
 		gl.glPointSize(4.0f);
 		gl.glPushMatrix();
-		gl.glRotatef(modelRotationY, 0.0f, -1.0f, 0.0f);
 		gl.glRotatef(modelRotationX, -1.0f, 0.0f, 0.0f);
+
+		gl.glRotatef(modelRotationY, 0.0f, -1.0f, 0.0f);
 		gl.glTranslatef(-VOXEL_GRID_SIZE * 0.5f, -VOXEL_GRID_SIZE * 0.5f, -VOXEL_GRID_SIZE * 0.5f);
 		_grid.draw(gl);
 		gl.glPopMatrix();
@@ -210,10 +211,24 @@ public class SculptScene implements GLEventListener, JoystickListener {
 			}
 		}
 
-		for (int x = 0; x < 640; ++x) {
-			for (int y = 0; y < 480; ++y) {
-				// TODO: Add real filter
-				filteredDepth[x][y] = depth[x][y];
+		final int radius = 1;
+		int bounds[] = { 320 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), 320 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), 240 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), 240 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f) };
+
+		for (int x = radius; x < 640 - radius; ++x) {
+			for (int y = radius; y < 480 - radius; ++y) {
+				// Optimization, ignore points too far from the model
+				if (x < bounds[0] || x > bounds[1] || y < bounds[2] || y > bounds[3]) {
+					continue;
+				}
+
+				// Apply simple box blur
+				float total = 0.0f;
+				for (int xk = -radius; xk <= radius; ++xk) {
+					for (int yk = -radius; yk <= radius; ++yk) {
+						total += depth[x + xk][y + yk];
+					}
+				}
+				filteredDepth[x][y] = total / ((radius * 2 + 1) * (radius * 2 + 1));
 
 				for (int i = 0; i < 30; ++i) {
 					float xOrig = x - 320;
@@ -221,9 +236,9 @@ public class SculptScene implements GLEventListener, JoystickListener {
 					float zOrig = filteredDepth[x][y] * KINECT_DEPTH_FACTOR - KINECT_DEPTH_FACTOR * 0.5f - i;
 
 					// Rotate the points the same amount that the model is rotated
-					float xVal = (float) (xOrig * SculptMath.cos(modelRotationY) + zOrig * SculptMath.sin(modelRotationY));
-					float yVal = (float) (xOrig * SculptMath.sin(modelRotationX) * SculptMath.sin(modelRotationY) + yOrig * SculptMath.cos(modelRotationX) - zOrig * SculptMath.sin(modelRotationX) * SculptMath.cos(modelRotationY));
-					float zVal = (float) (-xOrig * SculptMath.sin(modelRotationY) * SculptMath.cos(modelRotationX) + yOrig * SculptMath.sin(modelRotationX) + zOrig * SculptMath.cos(modelRotationX) * SculptMath.cos(modelRotationY));
+					float xVal = (float) (xOrig * SculptMath.cos(modelRotationY) + yOrig * SculptMath.sin(modelRotationY) * SculptMath.sin(modelRotationX) + zOrig * SculptMath.sin(modelRotationY) * SculptMath.cos(modelRotationX));
+					float yVal = (float) (yOrig * SculptMath.cos(modelRotationX) - zOrig * SculptMath.sin(modelRotationX));
+					float zVal = (float) (-xOrig * SculptMath.sin(modelRotationY) + yOrig * SculptMath.cos(modelRotationY) * SculptMath.sin(modelRotationX) + zOrig * SculptMath.cos(modelRotationY) * SculptMath.cos(modelRotationX));
 
 					int xPos = (int) (xVal + VOXEL_GRID_SIZE / 2);
 					int yPos = (int) (yVal + VOXEL_GRID_SIZE / 2);
@@ -232,6 +247,8 @@ public class SculptScene implements GLEventListener, JoystickListener {
 					// Check whether the point is within the bounding box of the model
 					if (zPos >= 0 && zPos < VOXEL_GRID_SIZE && xPos >= 0 && xPos < VOXEL_GRID_SIZE && yPos >= 0 && yPos < VOXEL_GRID_SIZE) {
 						_grid.setVoxel(xPos, yPos, zPos, VoxelGrid.VOXEL_GRID_AIR);
+					} else {
+						break;
 					}
 				}
 			}
