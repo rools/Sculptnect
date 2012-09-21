@@ -237,7 +237,8 @@ public class VoxelGridRender {
 	}
 
 	public void draw(GL2 gl) {
-		gl.glColor3f(0.4f, 0.4f, 0.4f);
+		float scale = 450.0f;
+		gl.glColor3f(107.0f / scale, 195.0f / scale, 193.0f / scale);
 
 		// Enable the vertex and normal arrays
 		gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);
