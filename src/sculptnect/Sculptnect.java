@@ -1,6 +1,8 @@
 package sculptnect;
 
 import java.awt.Frame;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -58,7 +60,7 @@ public class Sculptnect {
 		final SculptScene scene = new SculptScene();
 
 		final Frame frame = new Frame();
-		GLCanvas canvas = new GLCanvas(caps);
+		final GLCanvas canvas = new GLCanvas(caps);
 		canvas.addGLEventListener(scene);
 
 		// Add and start a display link
@@ -120,7 +122,23 @@ public class Sculptnect {
 				case 'O':
 					scene.removeRandomSphere();
 					break;
+				case 'K':
+					scene.resetModel();
+					break;
 				case 'F':
+					GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
+					GraphicsDevice device = environment.getDefaultScreenDevice();
+					if (device.getFullScreenWindow() != null) {
+						device.setFullScreenWindow(null);
+						frame.dispose();
+						frame.setUndecorated(false);
+						frame.setVisible(true);
+					} else {
+						frame.dispose();
+						frame.setUndecorated(true);
+						device.setFullScreenWindow(frame);
+					}
+					canvas.requestFocus();
 					break;
 				}
 			}
