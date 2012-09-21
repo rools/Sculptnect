@@ -2,7 +2,6 @@ package sculptnect;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Random;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
@@ -12,23 +11,34 @@ import javax.media.opengl.glu.gl2.GLUgl2;
 import javax.vecmath.Point3i;
 import javax.vecmath.Vector2f;
 
+import shape.CubeGenerator;
 import shape.SphereGenerator;
+import joystick.JoystickListener;
 
-public class SculptScene implements GLEventListener {
+public class SculptScene implements GLEventListener, JoystickListener {
 	private final int VOXEL_GRID_SIZE = 200;
-
 	private final short KINECT_NEAR_THRESHOLD = KinectUtils.metersToRawDepth(0.5f);
 	private final short KINECT_FAR_THRESHOLD = KinectUtils.metersToRawDepth(1.4f);
-	private final float KINECT_DEPTH_FACTOR = 400.0f;
+	private final float KINECT_DEPTH_FACTOR = 500.0f;
+
+	private final float JOYSTICK_ROTATION_SENSITIVITY = 3.0f;
+
+	private static final Vector2f INITIAL_ROTATION = new Vector2f((float) Math.PI * 0.25f, (float) Math.PI * 0.9f);
 
 	private VoxelGrid _grid;
 
-	private Vector2f _rotation = new Vector2f((float) Math.PI * 0.5f, (float) Math.PI);
+	private Vector2f _rotation = new Vector2f(INITIAL_ROTATION);
+	private Vector2f rotationSpeed = new Vector2f();
 
+	private float filteredDepth[][] = new float[640][480];
 	private float depth[][] = new float[640][480];
 	private float depthNormals[][][] = new float[640][480][3];
 
-	private boolean collision = false;
+	private float modelRotationX = 0.0f;
+	private float modelRotationY = 0.0f;
+
+	private float modelRotationSpeedX = 0.0f;
+	private float modelRotationSpeedY = 0.0f;
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
@@ -69,10 +79,7 @@ public class SculptScene implements GLEventListener {
 		_grid = new VoxelGrid(gl, size);
 
 		// Add sphere shape to voxel grid
-		// CubeGenerator generator = new
-		// CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size /
-		// 2, size / 2), size / 2);
-		SphereGenerator generator = new SphereGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2 - 2);
+		CubeGenerator generator = new CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2);
 		_grid.insertShape(generator);
 	}
 
@@ -95,6 +102,11 @@ public class SculptScene implements GLEventListener {
 
 	@Override
 	public void display(GLAutoDrawable drawable) {
+		_rotation.add(rotationSpeed);
+
+		modelRotationX = (modelRotationX + modelRotationSpeedX + 360.0f) % 360.0f;
+		modelRotationY = (modelRotationY + modelRotationSpeedY + 360.0f) % 360.0f;
+
 		GL2 gl = (GL2) drawable.getGL();
 
 		// Set default vertex color
@@ -118,6 +130,8 @@ public class SculptScene implements GLEventListener {
 		// Draw voxel grid
 		gl.glPointSize(4.0f);
 		gl.glPushMatrix();
+		gl.glRotatef(modelRotationY, 0.0f, -1.0f, 0.0f);
+		gl.glRotatef(modelRotationX, -1.0f, 0.0f, 0.0f);
 		gl.glTranslatef(-VOXEL_GRID_SIZE * 0.5f, -VOXEL_GRID_SIZE * 0.5f, -VOXEL_GRID_SIZE * 0.5f);
 		_grid.draw(gl);
 		gl.glPopMatrix();
@@ -125,12 +139,12 @@ public class SculptScene implements GLEventListener {
 		// Draw Kinect depth map
 		gl.glPointSize(1.0f);
 		gl.glPushMatrix();
-		gl.glTranslatef(-320.0f, -240.0f, -KINECT_DEPTH_FACTOR + VOXEL_GRID_SIZE * 0.5f);
+		gl.glTranslatef(-320.0f, -240.0f, -KINECT_DEPTH_FACTOR * 0.5f);
 		gl.glBegin(GL.GL_POINTS);
+		gl.glColor4f(0.3f, 0.0f, 0.0f, 0.9f);
 		for (int x = 0; x < 640; ++x) {
 			for (int y = 0; y < 480; ++y) {
 				if (depth[x][y] > 0.0f) {
-					gl.glColor4f(0.3f, collision ? 0.3f : 0.0f, 0.0f, depth[x][y]);
 					gl.glNormal3fv(depthNormals[x][y], 0);
 					gl.glVertex3f(x, 480 - y, depth[x][y] * KINECT_DEPTH_FACTOR);
 				}
@@ -173,13 +187,9 @@ public class SculptScene implements GLEventListener {
 		_rotation.x = Math.min((float) Math.PI / 2.0f, _rotation.x);
 	}
 
-	Random random = new Random(1);
-
 	public void removeRandomSphere() {
-		int size = (int) (random.nextDouble() * 30);
-		Point3i center = new Point3i(
-		//
-				(int) (random.nextDouble() * _grid.width), (int) (random.nextDouble() * _grid.height), (int) (random.nextDouble() * _grid.depth));
+		int size = (int) (Math.random() * 30);
+		Point3i center = new Point3i((int) (Math.random() * _grid.width), (int) (Math.random() * _grid.height), (int) (Math.random() * _grid.depth));
 
 		// Add sphere shape to voxel grid
 		SphereGenerator sphereGenerator = new SphereGenerator(VoxelGrid.VOXEL_GRID_AIR, center, size);
@@ -190,6 +200,7 @@ public class SculptScene implements GLEventListener {
 		depthBuffer.rewind();
 		depthBuffer.order(ByteOrder.LITTLE_ENDIAN);
 
+		// Retrieve Kinect depth data within the near and far threshold to a depth array
 		for (int y = 0; y < 480; ++y) {
 			for (int x = 0; x < 640; ++x) {
 				short rawDepth = depthBuffer.getShort();
@@ -197,32 +208,42 @@ public class SculptScene implements GLEventListener {
 					depth[x][y] = 0.0f;
 				} else {
 					depth[x][y] = (KINECT_FAR_THRESHOLD - rawDepth) / (float) (KINECT_FAR_THRESHOLD - KINECT_NEAR_THRESHOLD);
+				}
+			}
+		}
 
-					// Perform collision detection
-					int xPos = x - 320 + VOXEL_GRID_SIZE / 2;
-					int yPos = y - 240 + VOXEL_GRID_SIZE / 2;
-					int zPos = (int) (depth[x][y] * KINECT_DEPTH_FACTOR);
+		for (int x = 0; x < 640; ++x) {
+			for (int y = 0; y < 480; ++y) {
+				// TODO: Add real filter
+				filteredDepth[x][y] = depth[x][y];
 
-					yPos = (int) (VOXEL_GRID_SIZE - yPos);
-					zPos -= (KINECT_DEPTH_FACTOR - VOXEL_GRID_SIZE);
+				for (int i = 0; i < 30; ++i) {
+					float xOrig = x - 320;
+					float yOrig = (479 - y) - 240;
+					float zOrig = filteredDepth[x][y] * KINECT_DEPTH_FACTOR - KINECT_DEPTH_FACTOR * 0.5f - i;
 
-					// Check whether the point is within the bounding box of the
-					// model
-					if (xPos >= 0 && xPos < VOXEL_GRID_SIZE && yPos >= 0 && yPos < VOXEL_GRID_SIZE) {
+					// Rotate the points the same amount that the model is rotated
+					float xVal = (float) (xOrig * SculptMath.cos(modelRotationY) + zOrig * SculptMath.sin(modelRotationY));
+					float yVal = (float) (xOrig * SculptMath.sin(modelRotationX) * SculptMath.sin(modelRotationY) + yOrig * SculptMath.cos(modelRotationX) - zOrig * SculptMath.sin(modelRotationX) * SculptMath.cos(modelRotationY));
+					float zVal = (float) (-xOrig * SculptMath.sin(modelRotationY) * SculptMath.cos(modelRotationX) + yOrig * SculptMath.sin(modelRotationX) + zOrig * SculptMath.cos(modelRotationX) * SculptMath.cos(modelRotationY));
 
-						for (int i = 0; i < 10 && zPos >= 0; i++, zPos--) {
-							_grid.setVoxel(xPos, yPos, zPos, VoxelGrid.VOXEL_GRID_AIR);
-						}
+					int xPos = (int) (xVal + VOXEL_GRID_SIZE / 2);
+					int yPos = (int) (yVal + VOXEL_GRID_SIZE / 2);
+					int zPos = (int) (zVal + VOXEL_GRID_SIZE / 2);
 
+					// Check whether the point is within the bounding box of the model
+					if (zPos >= 0 && zPos < VOXEL_GRID_SIZE && xPos >= 0 && xPos < VOXEL_GRID_SIZE && yPos >= 0 && yPos < VOXEL_GRID_SIZE) {
+						_grid.setVoxel(xPos, yPos, zPos, VoxelGrid.VOXEL_GRID_AIR);
 					}
 				}
 			}
 		}
 
+		// Estimate the normals of the Kinect point cloud from neighboring points
 		for (int x = 1; x < 639; ++x) {
 			for (int y = 1; y < 479; ++y) {
-				depthNormals[x][y][0] = depth[x + 1][y] - depth[x - 1][y];
-				depthNormals[x][y][1] = depth[x][y + 1] - depth[x][y - 1];
+				depthNormals[x][y][0] = filteredDepth[x + 1][y] - filteredDepth[x - 1][y];
+				depthNormals[x][y][1] = filteredDepth[x][y + 1] - filteredDepth[x][y - 1];
 				depthNormals[x][y][2] = 0.01f;
 
 				float l = (float) Math.sqrt(depthNormals[x][y][0] * depthNormals[x][y][0] + depthNormals[x][y][1] * depthNormals[x][y][1] + depthNormals[x][y][2] * depthNormals[x][y][2]);
@@ -231,6 +252,37 @@ public class SculptScene implements GLEventListener {
 				depthNormals[x][y][1] /= l;
 				depthNormals[x][y][2] /= l;
 			}
+		}
+	}
+
+	public void modifyModelRotationX(float angle) {
+		modelRotationX = (modelRotationX + angle + 360.0f) % 360.0f;
+	}
+
+	public void modifyModelRotationY(float angle) {
+		modelRotationY = (modelRotationY + angle + 360.0f) % 360;
+	}
+
+	@Override
+	public void buttonReceived(String button, boolean value) {
+		if (button.equals("10")) {
+			modelRotationX = 0;
+			modelRotationY = 0;
+		} else if (button.equals("11")) {
+			_rotation.set(INITIAL_ROTATION);
+		}
+	}
+
+	@Override
+	public void analogChanged(String analog, float value) {
+		if (analog.equals("y")) {
+			modelRotationSpeedX = value * JOYSTICK_ROTATION_SENSITIVITY;
+		} else if (analog.equals("x")) {
+			modelRotationSpeedY = -value * JOYSTICK_ROTATION_SENSITIVITY;
+		} else if (analog.equals("z")) {
+			rotationSpeed.x = value * 0.01745329251f * JOYSTICK_ROTATION_SENSITIVITY;
+		} else if (analog.equals("rz")) {
+			rotationSpeed.y = value * 0.01745329251f * JOYSTICK_ROTATION_SENSITIVITY;
 		}
 	}
 }

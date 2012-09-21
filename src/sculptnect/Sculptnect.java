@@ -17,6 +17,10 @@ import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
 
+import joystick.Joystick;
+import joystick.JoystickManager;
+import net.java.games.input.Controller;
+
 import org.openkinect.freenect.Context;
 import org.openkinect.freenect.DepthFormat;
 import org.openkinect.freenect.DepthHandler;
@@ -82,11 +86,9 @@ public class Sculptnect {
 				// Exit if ESC was pressed
 				if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
 					exit(0);
-				}
-				if (event.getKeyCode() == KeyEvent.VK_SPACE) {
+				} else if (event.getKeyCode() == KeyEvent.VK_SPACE) {
 					dump = true;
-				}
-				if (event.getKeyCode() == 'R') {
+				} else if (event.getKeyCode() == 'R') {
 					if (depthRecord == null) {
 						try {
 							String file = new Date().getTime() + ".raw.gz";
@@ -100,6 +102,14 @@ public class Sculptnect {
 						depthRecord = null;
 						System.out.println("Recording stopped");
 					}
+				} else if (event.getKeyCode() == KeyEvent.VK_LEFT) {
+					scene.modifyModelRotationY(-1.0f);
+				} else if (event.getKeyCode() == KeyEvent.VK_RIGHT) {
+					scene.modifyModelRotationY(1.0f);
+				} else if (event.getKeyCode() == KeyEvent.VK_UP) {
+					scene.modifyModelRotationX(1.0f);
+				} else if (event.getKeyCode() == KeyEvent.VK_DOWN) {
+					scene.modifyModelRotationX(-1.0f);
 				}
 				if (event.getKeyCode() == 'O') {
 					scene.removeRandomSphere();
@@ -173,6 +183,12 @@ public class Sculptnect {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
+		}
+
+		// Set up Playstation 2 controller
+		Joystick joystick = JoystickManager.getJoystick(Controller.Type.STICK);
+		if (joystick != null) {
+			joystick.setJoystickListener(scene);
 		}
 	}
 
