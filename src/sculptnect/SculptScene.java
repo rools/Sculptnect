@@ -62,13 +62,15 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 		// Define light color and position
 		float ambientColor[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-		float light = 0.0035f;
+		float light = 0.0055f;
 		float lightColor1[] = { light, light, light, 1.0f };
+		float specularColor[] = {1.0f, 1.0f, 1.0f, 1.0f};
 		float lightPos1[] = { 100000.0f, 100000.0f, 100000.0f, 1.0f };
 
 		// Set light color and position
 		gl.glLightModelfv(GL2.GL_LIGHT_MODEL_AMBIENT, ambientColor, 0);
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_AMBIENT, ambientColor, 0);
+		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_SPECULAR, specularColor, 0);
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_DIFFUSE, lightColor1, 0);
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, lightPos1, 0);
 
