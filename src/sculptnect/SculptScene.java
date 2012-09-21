@@ -23,7 +23,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 	private final float JOYSTICK_ROTATION_SENSITIVITY = 3.0f;
 
-	private static final Vector2f INITIAL_ROTATION = new Vector2f((float) Math.PI * 0.25f, (float) Math.PI * 0.9f);
+	private static final Vector2f INITIAL_ROTATION = new Vector2f((float) Math.PI * 0.0f, (float) Math.PI * 1.0f);
 
 	private VoxelGrid _grid;
 
@@ -39,6 +39,9 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 	private float modelRotationSpeedX = 0.0f;
 	private float modelRotationSpeedY = 0.0f;
+	
+	private boolean turningMode;
+
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
@@ -77,9 +80,13 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		// Create voxel grid
 		int size = VOXEL_GRID_SIZE;
 		_grid = new VoxelGrid(gl, size);
-
+		
+		resetModel();
+	}
+	
+	public void resetModel() {
 		// Add sphere shape to voxel grid
-		CubeGenerator generator = new CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2 - 2);
+		CubeGenerator generator = new CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(VOXEL_GRID_SIZE / 2, VOXEL_GRID_SIZE / 2, VOXEL_GRID_SIZE / 2), VOXEL_GRID_SIZE / 2 - 2);
 		_grid.insertShape(generator);
 	}
 
@@ -128,7 +135,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		gl.glRotatef(_rotation.y * 57.2957795f, 0.0f, 1.0f, 0.0f);
 
 		// Draw voxel grid
-		gl.glPointSize(4.0f);
+		gl.glPointSize(6.0f);
 		gl.glPushMatrix();
 		gl.glRotatef(modelRotationX, -1.0f, 0.0f, 0.0f);
 
@@ -137,25 +144,25 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		_grid.draw(gl);
 		gl.glPopMatrix();
 
+		// Disable lighting to draw axis lines
+		gl.glDisable(GL2.GL_LIGHTING);
+
 		// Draw Kinect depth map
 		gl.glPointSize(3.0f);
 		gl.glPushMatrix();
 		gl.glTranslatef(-320.0f, -240.0f, -KINECT_DEPTH_FACTOR * 0.5f);
 		gl.glBegin(GL.GL_POINTS);
-		gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
+		gl.glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
 		for (int x = 0; x < 640; ++x) {
 			for (int y = 0; y < 480; ++y) {
 				if (depth[x][y] > 0.0f) {
-					gl.glNormal3fv(depthNormals[x][y], 0);
+					//gl.glNormal3fv(depthNormals[x][y], 0);
 					gl.glVertex3f(x, 480 - y, depth[x][y] * KINECT_DEPTH_FACTOR);
 				}
 			}
 		}
 		gl.glEnd();
 		gl.glPopMatrix();
-
-		// Disable lighting to draw axis lines
-		gl.glDisable(GL2.GL_LIGHTING);
 
 		// Draw coordinate axes
 		gl.glBegin(GL2.GL_LINES);
@@ -259,8 +266,8 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		// Estimate the normals of the Kinect point cloud from neighboring points
 		for (int x = 1; x < 639; ++x) {
 			for (int y = 1; y < 479; ++y) {
-				depthNormals[x][y][0] = filteredDepth[x + 1][y] - filteredDepth[x - 1][y];
-				depthNormals[x][y][1] = filteredDepth[x][y + 1] - filteredDepth[x][y - 1];
+				depthNormals[x][y][0] = depth[x + 1][y] - depth[x - 1][y];
+				depthNormals[x][y][1] = depth[x][y + 1] - depth[x][y - 1];
 				depthNormals[x][y][2] = 0.01f;
 
 				float l = (float) Math.sqrt(depthNormals[x][y][0] * depthNormals[x][y][0] + depthNormals[x][y][1] * depthNormals[x][y][1] + depthNormals[x][y][2] * depthNormals[x][y][2]);
@@ -287,6 +294,19 @@ public class SculptScene implements GLEventListener, JoystickListener {
 			modelRotationY = 0;
 		} else if (button.equals("11")) {
 			_rotation.set(INITIAL_ROTATION);
+		} else if (button.equals("7")) { //left
+			modelRotationSpeedY = value ? 2.0f : 0.0f;
+		} else if (button.equals("5")) { //right
+			modelRotationSpeedY = value ? -2.0f : 0.0f;
+		} else if (button.equals("4")) { //up
+			modelRotationSpeedX = value ? 2.0f : 0.0f;
+		} else if (button.equals("6")) { //down
+			modelRotationSpeedX = value ? -2.0f : 0.0f;
+		} else if (value && button.equals("3")) {
+			resetModel();
+		} else if (value && button.equals("12")) {
+			turningMode = !turningMode;
+			modelRotationSpeedY = turningMode ? 1.0f : 0.0f;
 		}
 	}
 
@@ -296,9 +316,9 @@ public class SculptScene implements GLEventListener, JoystickListener {
 			modelRotationSpeedX = value * JOYSTICK_ROTATION_SENSITIVITY;
 		} else if (analog.equals("x")) {
 			modelRotationSpeedY = -value * JOYSTICK_ROTATION_SENSITIVITY;
-		} else if (analog.equals("z")) {
-			rotationSpeed.x = value * 0.01745329251f * JOYSTICK_ROTATION_SENSITIVITY;
 		} else if (analog.equals("rz")) {
+			rotationSpeed.x = value * 0.01745329251f * JOYSTICK_ROTATION_SENSITIVITY;
+		} else if (analog.equals("z")) {
 			rotationSpeed.y = value * 0.01745329251f * JOYSTICK_ROTATION_SENSITIVITY;
 		}
 	}

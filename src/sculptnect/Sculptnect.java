@@ -114,6 +114,9 @@ public class Sculptnect {
 				if (event.getKeyCode() == 'O') {
 					scene.removeRandomSphere();
 				}
+				if (event.getKeyCode() == 'F') {
+					
+				}
 			}
 		});
 

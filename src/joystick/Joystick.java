@@ -1,5 +1,8 @@
 package joystick;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import net.java.games.input.Component;
 import net.java.games.input.Controller;
 import net.java.games.input.Event;
@@ -9,6 +12,8 @@ public class Joystick {
 	private static final float ANALOG_DEAD_ZONE = 0.2f;
 
 	private Controller controller;
+	
+	private Set<String> inDeadZone = new HashSet<String>();
 
 	public Joystick(Controller controller) {
 		this.controller = controller;
@@ -24,16 +29,25 @@ public class Joystick {
 					while (queue.getNextEvent(event)) {
 						Component comp = event.getComponent();
 
+						String name = comp.getName();
 						if (comp.isAnalog()) {
 							float value = event.getValue();
 
-							if (Math.abs(value) < ANALOG_DEAD_ZONE) {
-								value = 0.0f;
+							if (inDeadZone.contains(name)) {
+								if (Math.abs(value) >= ANALOG_DEAD_ZONE) {
+									listener.analogChanged(name, value);
+									inDeadZone.remove(name);
+								}
+							} else {
+								if (Math.abs(value) < ANALOG_DEAD_ZONE) {
+									value = 0.0f;
+									inDeadZone.add(name);
+								}
+								
+								listener.analogChanged(name, value);
 							}
-
-							listener.analogChanged(comp.getName(), value);
 						} else {
-							listener.buttonReceived(comp.getName(), event.getValue() > 0.5f);
+							listener.buttonReceived(name, event.getValue() > 0.5f);
 						}
 					}
 
