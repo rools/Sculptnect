@@ -83,12 +83,14 @@ public class Sculptnect {
 		canvas.addKeyListener(new KeyAdapter() {
 			@Override
 			public void keyPressed(KeyEvent event) {
-				// Exit if ESC was pressed
-				if (event.getKeyCode() == KeyEvent.VK_ESCAPE) {
+				switch (event.getKeyCode()) {
+				case KeyEvent.VK_ESCAPE:
 					exit(0);
-				} else if (event.getKeyCode() == KeyEvent.VK_SPACE) {
+					break;
+				case KeyEvent.VK_SPACE:
 					dump = true;
-				} else if (event.getKeyCode() == 'R') {
+					break;
+				case 'R':
 					if (depthRecord == null) {
 						try {
 							String file = new Date().getTime() + ".raw.gz";
@@ -102,20 +104,24 @@ public class Sculptnect {
 						depthRecord = null;
 						System.out.println("Recording stopped");
 					}
-				} else if (event.getKeyCode() == KeyEvent.VK_LEFT) {
+					break;
+				case KeyEvent.VK_LEFT:
 					scene.modifyModelRotationY(-1.0f);
-				} else if (event.getKeyCode() == KeyEvent.VK_RIGHT) {
+					break;
+				case KeyEvent.VK_RIGHT:
 					scene.modifyModelRotationY(1.0f);
-				} else if (event.getKeyCode() == KeyEvent.VK_UP) {
+					break;
+				case KeyEvent.VK_UP:
 					scene.modifyModelRotationX(1.0f);
-				} else if (event.getKeyCode() == KeyEvent.VK_DOWN) {
+					break;
+				case KeyEvent.VK_DOWN:
 					scene.modifyModelRotationX(-1.0f);
-				}
-				if (event.getKeyCode() == 'O') {
+					break;
+				case 'O':
 					scene.removeRandomSphere();
-				}
-				if (event.getKeyCode() == 'F') {
-					
+					break;
+				case 'F':
+					break;
 				}
 			}
 		});
