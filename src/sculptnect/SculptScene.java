@@ -13,16 +13,22 @@ import javax.vecmath.Vector2f;
 
 import shape.CubeGenerator;
 import shape.SphereGenerator;
+import joystick.JoystickListener;
 
-public class SculptScene implements GLEventListener {
+public class SculptScene implements GLEventListener, JoystickListener {
 	private final int VOXEL_GRID_SIZE = 200;
 	private final short KINECT_NEAR_THRESHOLD = KinectUtils.metersToRawDepth(0.5f);
 	private final short KINECT_FAR_THRESHOLD = KinectUtils.metersToRawDepth(1.4f);
 	private final float KINECT_DEPTH_FACTOR = 500.0f;
 
+	private final float JOYSTICK_ROTATION_SENSITIVITY = 3.0f;
+
+	private static final Vector2f INITIAL_ROTATION = new Vector2f((float) Math.PI * 0.25f, (float) Math.PI * 0.9f);
+
 	private VoxelGrid _grid;
 
-	private Vector2f _rotation = new Vector2f((float) Math.PI * 0.25f, (float) Math.PI * 0.9f);
+	private Vector2f _rotation = new Vector2f(INITIAL_ROTATION);
+	private Vector2f rotationSpeed = new Vector2f();
 
 	private float filteredDepth[][] = new float[640][480];
 	private float depth[][] = new float[640][480];
@@ -30,6 +36,9 @@ public class SculptScene implements GLEventListener {
 
 	private float modelRotationX = 0.0f;
 	private float modelRotationY = 0.0f;
+
+	private float modelRotationSpeedX = 0.0f;
+	private float modelRotationSpeedY = 0.0f;
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
@@ -91,6 +100,11 @@ public class SculptScene implements GLEventListener {
 
 	@Override
 	public void display(GLAutoDrawable drawable) {
+		_rotation.add(rotationSpeed);
+
+		modelRotationX = (modelRotationX + modelRotationSpeedX + 360.0f) % 360.0f;
+		modelRotationY = (modelRotationY + modelRotationSpeedY + 360.0f) % 360.0f;
+
 		GL2 gl = (GL2) drawable.getGL();
 
 		// Set default vertex color
@@ -245,5 +259,28 @@ public class SculptScene implements GLEventListener {
 
 	public void modifyModelRotationY(float angle) {
 		modelRotationY = (modelRotationY + angle + 360.0f) % 360;
+	}
+
+	@Override
+	public void buttonReceived(String button, boolean value) {
+		if (button.equals("10")) {
+			modelRotationX = 0;
+			modelRotationY = 0;
+		} else if (button.equals("11")) {
+			_rotation.set(INITIAL_ROTATION);
+		}
+	}
+
+	@Override
+	public void analogChanged(String analog, float value) {
+		if (analog.equals("y")) {
+			modelRotationSpeedX = value * JOYSTICK_ROTATION_SENSITIVITY;
+		} else if (analog.equals("x")) {
+			modelRotationSpeedY = -value * JOYSTICK_ROTATION_SENSITIVITY;
+		} else if (analog.equals("z")) {
+			rotationSpeed.x = value * 0.01745329251f * JOYSTICK_ROTATION_SENSITIVITY;
+		} else if (analog.equals("rz")) {
+			rotationSpeed.y = value * 0.01745329251f * JOYSTICK_ROTATION_SENSITIVITY;
+		}
 	}
 }

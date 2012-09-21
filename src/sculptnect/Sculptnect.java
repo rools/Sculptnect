@@ -17,6 +17,10 @@ import javax.media.opengl.GLCapabilities;
 import javax.media.opengl.GLProfile;
 import javax.media.opengl.awt.GLCanvas;
 
+import joystick.Joystick;
+import joystick.JoystickManager;
+import net.java.games.input.Controller;
+
 import org.openkinect.freenect.Context;
 import org.openkinect.freenect.DepthFormat;
 import org.openkinect.freenect.DepthHandler;
@@ -179,6 +183,12 @@ public class Sculptnect {
 			} catch (IOException e1) {
 				e1.printStackTrace();
 			}
+		}
+
+		// Set up Playstation 2 controller
+		Joystick joystick = JoystickManager.getJoystick(Controller.Type.STICK);
+		if (joystick != null) {
+			joystick.setJoystickListener(scene);
 		}
 	}
 
