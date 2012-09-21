@@ -2,6 +2,12 @@ package sculptnect;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
@@ -20,6 +26,8 @@ public class SculptScene implements GLEventListener, JoystickListener {
 	private final short KINECT_NEAR_THRESHOLD = KinectUtils.metersToRawDepth(0.5f);
 	private final short KINECT_FAR_THRESHOLD = KinectUtils.metersToRawDepth(1.4f);
 	private final float KINECT_DEPTH_FACTOR = 500.0f;
+
+	private static final int NUM_THREADS = 4;
 
 	private static final int DEPTH_WIDTH = 640;
 	private static final int DEPTH_HEIGHT = 480;
@@ -43,6 +51,101 @@ public class SculptScene implements GLEventListener, JoystickListener {
 	private float modelRotationSpeedY = 0.0f;
 
 	private boolean turningMode;
+
+	private final ExecutorService kinectExecutorService = Executors.newFixedThreadPool(NUM_THREADS);
+	private final List<KinectWorker> kinectWorkers = new ArrayList<KinectWorker>();
+	private final CyclicBarrier workersBarrier = new CyclicBarrier(NUM_THREADS);
+
+	public class KinectWorker implements Callable<Void> {
+		public int lower, upper;
+		public ByteBuffer depthBuffer;
+
+		public KinectWorker(int lower, int upper) {
+			this.lower = lower;
+			this.upper = upper;
+		}
+
+		@Override
+		public Void call() throws Exception {
+			// Retrieve Kinect depth data within the near and far threshold to a
+			// depth array
+			for (int y = lower; y < upper; ++y) {
+				for (int x = 0; x < DEPTH_WIDTH; ++x) {
+					short rawDepth = depthBuffer.getShort(2 * (y * DEPTH_WIDTH + x));
+					if (rawDepth < KINECT_NEAR_THRESHOLD || rawDepth > KINECT_FAR_THRESHOLD) {
+						depth[x][y] = 0.0f;
+					} else {
+						depth[x][y] = (KINECT_FAR_THRESHOLD - rawDepth) / (float) (KINECT_FAR_THRESHOLD - KINECT_NEAR_THRESHOLD);
+					}
+				}
+			}
+
+			workersBarrier.await();
+
+			final int radius = 4;
+			int bounds[] = { DEPTH_WIDTH - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
+					DEPTH_WIDTH + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
+					DEPTH_HEIGHT - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
+					DEPTH_HEIGHT + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f) };
+
+			int lowery = (lower < radius ? radius : lower);
+			int uppery = (upper > DEPTH_HEIGHT - radius ? DEPTH_HEIGHT - radius : upper);
+			for (int x = radius; x < DEPTH_WIDTH - radius; ++x) {
+				for (int y = lowery; y < uppery; ++y) {
+					// Optimization, ignore points too far from the model
+					if (x < bounds[0] || x > bounds[1] || y < bounds[2] || y > bounds[3]) {
+						continue;
+					}
+
+					// Apply simple box blur
+					float total = 0.0f;
+					for (int xk = -radius; xk <= radius; ++xk) {
+						for (int yk = -radius; yk <= radius; ++yk) {
+							total += depth[x + xk][y + yk];
+						}
+					}
+					filteredDepth[x][y] = total / ((radius * 2 + 1) * (radius * 2 + 1));
+
+					for (int i = 0; i < 30; ++i) {
+						float xOrig = x - DEPTH_WIDTH / 2;
+						float yOrig = (DEPTH_HEIGHT - 1 - y) - DEPTH_HEIGHT / 2;
+						float zOrig = filteredDepth[x][y] * KINECT_DEPTH_FACTOR - KINECT_DEPTH_FACTOR * 0.5f - i;
+
+						// Rotate the points the same amount that the model is
+						// rotated
+						float xVal = (float) (xOrig * SculptMath.cos(modelRotationY) + yOrig * SculptMath.sin(modelRotationY) * SculptMath.sin(modelRotationX) + zOrig * SculptMath.sin(modelRotationY) * SculptMath.cos(modelRotationX));
+						float yVal = (float) (yOrig * SculptMath.cos(modelRotationX) - zOrig * SculptMath.sin(modelRotationX));
+						float zVal = (float) (-xOrig * SculptMath.sin(modelRotationY) + yOrig * SculptMath.cos(modelRotationY) * SculptMath.sin(modelRotationX) + zOrig * SculptMath.cos(modelRotationY) * SculptMath.cos(modelRotationX));
+
+						int xPos = (int) (xVal + VOXEL_GRID_SIZE / 2);
+						int yPos = (int) (yVal + VOXEL_GRID_SIZE / 2);
+						int zPos = (int) (zVal + VOXEL_GRID_SIZE / 2);
+
+						// Check whether the point is within the bounding box of
+						// the
+						// model
+						if (zPos >= 0 && zPos < VOXEL_GRID_SIZE && xPos >= 0 && xPos < VOXEL_GRID_SIZE && yPos >= 0 && yPos < VOXEL_GRID_SIZE) {
+							grid.setVoxel(xPos, yPos, zPos, VoxelGrid.VOXEL_GRID_AIR);
+						} else {
+							break;
+						}
+					}
+				}
+			}
+
+			return null;
+		}
+	}
+
+	public SculptScene() {
+		// Create KinectWorkers
+		int step = DEPTH_HEIGHT / NUM_THREADS;
+		for (int i = 0; i < NUM_THREADS; i++) {
+			int lower = step * i;
+			int upper = Math.min(lower + step, DEPTH_HEIGHT);
+			kinectWorkers.add(new KinectWorker(lower, upper));
+		}
+	}
 
 	@Override
 	public void init(GLAutoDrawable drawable) {
@@ -209,66 +312,16 @@ public class SculptScene implements GLEventListener, JoystickListener {
 	public void updateKinect(ByteBuffer depthBuffer) {
 		depthBuffer.rewind();
 		depthBuffer.order(ByteOrder.LITTLE_ENDIAN);
-
-		// Retrieve Kinect depth data within the near and far threshold to a
-		// depth array
-		for (int y = 0; y < DEPTH_HEIGHT; ++y) {
-			for (int x = 0; x < DEPTH_WIDTH; ++x) {
-				short rawDepth = depthBuffer.getShort();
-				if (rawDepth < KINECT_NEAR_THRESHOLD || rawDepth > KINECT_FAR_THRESHOLD) {
-					depth[x][y] = 0.0f;
-				} else {
-					depth[x][y] = (KINECT_FAR_THRESHOLD - rawDepth) / (float) (KINECT_FAR_THRESHOLD - KINECT_NEAR_THRESHOLD);
-				}
-			}
+		System.out.println("updating kinect");
+		for (KinectWorker worker : kinectWorkers) {
+			worker.depthBuffer = depthBuffer;
 		}
 
-		final int radius = 4;
-		int bounds[] = { DEPTH_WIDTH - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
-				DEPTH_WIDTH + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
-				DEPTH_HEIGHT - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
-				DEPTH_HEIGHT + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f) };
-
-		for (int x = radius; x < DEPTH_WIDTH - radius; ++x) {
-			for (int y = radius; y < DEPTH_HEIGHT - radius; ++y) {
-				// Optimization, ignore points too far from the model
-				if (x < bounds[0] || x > bounds[1] || y < bounds[2] || y > bounds[3]) {
-					continue;
-				}
-
-				// Apply simple box blur
-				float total = 0.0f;
-				for (int xk = -radius; xk <= radius; ++xk) {
-					for (int yk = -radius; yk <= radius; ++yk) {
-						total += depth[x + xk][y + yk];
-					}
-				}
-				filteredDepth[x][y] = total / ((radius * 2 + 1) * (radius * 2 + 1));
-
-				for (int i = 0; i < 30; ++i) {
-					float xOrig = x - DEPTH_WIDTH / 2;
-					float yOrig = (DEPTH_HEIGHT - 1 - y) - DEPTH_HEIGHT / 2;
-					float zOrig = filteredDepth[x][y] * KINECT_DEPTH_FACTOR - KINECT_DEPTH_FACTOR * 0.5f - i;
-
-					// Rotate the points the same amount that the model is
-					// rotated
-					float xVal = (float) (xOrig * SculptMath.cos(modelRotationY) + yOrig * SculptMath.sin(modelRotationY) * SculptMath.sin(modelRotationX) + zOrig * SculptMath.sin(modelRotationY) * SculptMath.cos(modelRotationX));
-					float yVal = (float) (yOrig * SculptMath.cos(modelRotationX) - zOrig * SculptMath.sin(modelRotationX));
-					float zVal = (float) (-xOrig * SculptMath.sin(modelRotationY) + yOrig * SculptMath.cos(modelRotationY) * SculptMath.sin(modelRotationX) + zOrig * SculptMath.cos(modelRotationY) * SculptMath.cos(modelRotationX));
-
-					int xPos = (int) (xVal + VOXEL_GRID_SIZE / 2);
-					int yPos = (int) (yVal + VOXEL_GRID_SIZE / 2);
-					int zPos = (int) (zVal + VOXEL_GRID_SIZE / 2);
-
-					// Check whether the point is within the bounding box of the
-					// model
-					if (zPos >= 0 && zPos < VOXEL_GRID_SIZE && xPos >= 0 && xPos < VOXEL_GRID_SIZE && yPos >= 0 && yPos < VOXEL_GRID_SIZE) {
-						grid.setVoxel(xPos, yPos, zPos, VoxelGrid.VOXEL_GRID_AIR);
-					} else {
-						break;
-					}
-				}
-			}
+		try {
+			// Start all workers and wait for them to finish
+			kinectExecutorService.invokeAll(kinectWorkers);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 
