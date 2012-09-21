@@ -116,7 +116,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 		GL2 gl = (GL2) drawable.getGL();
 		
-		//removeRandomSphere();
+		removeRandomSphere();
 
 		// Set default vertex color
 		gl.glColor3f(0.0f, 0.0f, 0.0f);

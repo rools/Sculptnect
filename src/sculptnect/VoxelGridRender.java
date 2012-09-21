@@ -20,8 +20,8 @@ import javax.vecmath.Vector3f;
 import com.jogamp.common.nio.Buffers;
 
 public class VoxelGridRender {
-	private static final int CELL_SIZE = 64;
-	private static final int NUM_THREADS = 8;
+	private static final int CELL_SIZE = 20;
+	private static final int NUM_THREADS = 4;
 
 	VoxelGrid grid;
 	BufferCell[][][] bufferCells;
