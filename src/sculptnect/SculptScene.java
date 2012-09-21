@@ -35,7 +35,6 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 	private float filteredDepth[][] = new float[DEPTH_WIDTH][DEPTH_HEIGHT];
 	private float depth[][] = new float[DEPTH_WIDTH][DEPTH_HEIGHT];
-	private float depthNormals[][][] = new float[DEPTH_WIDTH][DEPTH_HEIGHT][3];
 
 	private float modelRotationX = 0.0f;
 	private float modelRotationY = 0.0f;
@@ -148,7 +147,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		grid.draw(gl);
 		gl.glPopMatrix();
 
-		// Disable lighting to draw axis lines
+		// Disable lighting to draw depth points and axis lines
 		gl.glDisable(GL2.GL_LIGHTING);
 
 		// Draw Kinect depth map
@@ -160,7 +159,6 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		for (int x = 0; x < DEPTH_WIDTH; ++x) {
 			for (int y = 0; y < DEPTH_HEIGHT; ++y) {
 				if (depth[x][y] > 0.0f) {
-					// gl.glNormal3fv(depthNormals[x][y], 0);
 					gl.glVertex3f(x, DEPTH_HEIGHT - y, depth[x][y] * KINECT_DEPTH_FACTOR);
 				}
 			}
@@ -270,22 +268,6 @@ public class SculptScene implements GLEventListener, JoystickListener {
 						break;
 					}
 				}
-			}
-		}
-
-		// Estimate the normals of the Kinect point cloud from neighboring
-		// points
-		for (int x = 1; x < DEPTH_WIDTH - 1; ++x) {
-			for (int y = 1; y < DEPTH_HEIGHT - 1; ++y) {
-				depthNormals[x][y][0] = depth[x + 1][y] - depth[x - 1][y];
-				depthNormals[x][y][1] = depth[x][y + 1] - depth[x][y - 1];
-				depthNormals[x][y][2] = 0.01f;
-
-				float l = (float) Math.sqrt(depthNormals[x][y][0] * depthNormals[x][y][0] + depthNormals[x][y][1] * depthNormals[x][y][1] + depthNormals[x][y][2] * depthNormals[x][y][2]);
-
-				depthNormals[x][y][0] /= l;
-				depthNormals[x][y][1] /= l;
-				depthNormals[x][y][2] /= l;
 			}
 		}
 	}
