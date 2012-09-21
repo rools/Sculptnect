@@ -124,9 +124,9 @@ public class VoxelGridRender {
 			normal.set(0, 0, 0);
 
 			// Iterate through the 26 neighbors of the voxel
-			for (int xd = -1; xd < 2; xd++) {
-				for (int yd = -1; yd < 2; yd++) {
-					for (int zd = -1; zd < 2; zd++) {
+			for (int xd = -2; xd < 3; xd++) {
+				for (int yd = -2; yd < 3; yd++) {
+					for (int zd = -2; zd < 3; zd++) {
 						int xoff = x + xd;
 						int yoff = y + yd;
 						int zoff = z + zd;

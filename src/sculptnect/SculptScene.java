@@ -79,7 +79,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		_grid = new VoxelGrid(gl, size);
 
 		// Add sphere shape to voxel grid
-		CubeGenerator generator = new CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2);
+		CubeGenerator generator = new CubeGenerator(VoxelGrid.VOXEL_GRID_CLAY, new Point3i(size / 2, size / 2, size / 2), size / 2 - 2);
 		_grid.insertShape(generator);
 	}
 
@@ -95,7 +95,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		// Set a perspective projection matrix
 		gl.glMatrixMode(GL2.GL_PROJECTION);
 		gl.glLoadIdentity();
-		GLUgl2.createGLU(gl).gluPerspective(90.0f, (float) width / height, 0.1f, 1000.0f);
+		GLUgl2.createGLU(gl).gluPerspective(60.0f, (float) width / height, 0.1f, 1000.0f);
 
 		gl.glMatrixMode(GL2.GL_MODELVIEW);
 	}
@@ -138,11 +138,11 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		gl.glPopMatrix();
 
 		// Draw Kinect depth map
-		gl.glPointSize(1.0f);
+		gl.glPointSize(3.0f);
 		gl.glPushMatrix();
 		gl.glTranslatef(-320.0f, -240.0f, -KINECT_DEPTH_FACTOR * 0.5f);
 		gl.glBegin(GL.GL_POINTS);
-		gl.glColor4f(0.3f, 0.0f, 0.0f, 0.9f);
+		gl.glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
 		for (int x = 0; x < 640; ++x) {
 			for (int y = 0; y < 480; ++y) {
 				if (depth[x][y] > 0.0f) {
@@ -213,7 +213,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 			}
 		}
 
-		final int radius = 1;
+		final int radius = 4;
 		int bounds[] = { 320 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), 320 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), 240 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), 240 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f) };
 
 		for (int x = radius; x < 640 - radius; ++x) {
