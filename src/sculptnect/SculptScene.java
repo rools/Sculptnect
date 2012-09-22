@@ -128,6 +128,12 @@ public class SculptScene implements GLEventListener, JoystickListener {
 			int upper = Math.min(lower + step, DEPTH_HEIGHT);
 			kinectWorkers.add(new KinectWorker(lower, upper));
 		}
+		
+		// Create voxel grid
+		int size = VOXEL_GRID_SIZE;
+		grid = new VoxelGrid(size);
+
+		resetModel();
 	}
 
 	@Override
@@ -163,12 +169,6 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_SPECULAR, specularColor, 0);
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_DIFFUSE, lightColor1, 0);
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, lightPos1, 0);
-
-		// Create voxel grid
-		int size = VOXEL_GRID_SIZE;
-		grid = new VoxelGrid(gl, size);
-
-		resetModel();
 	}
 
 	public void resetModel() {
@@ -314,8 +314,12 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		}
 
 		try {
+			grid.beginEditing();
+			
 			// Start all workers and wait for them to finish
 			kinectExecutorService.invokeAll(kinectWorkers);
+			
+			grid.endEditing();
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}

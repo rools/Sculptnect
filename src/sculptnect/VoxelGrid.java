@@ -26,18 +26,18 @@ public class VoxelGrid {
 			{ 0, 0, 1 }, //
 	};
 
-	public VoxelGrid(GL2 gl, int size) {
-		this(gl, size, size, size);
+	public VoxelGrid(int size) {
+		this(size, size, size);
 	}
 
-	public VoxelGrid(GL2 gl, int width, int height, int depth) {
+	public VoxelGrid(int width, int height, int depth) {
 		this.width = width;
 		this.height = height;
 		this.depth = depth;
 		_voxels = new byte[width][height][depth];
 
 		// Create render
-		render = new VoxelGridRender(gl, this);
+		render = new VoxelGridRender(this);
 	}
 
 	public byte getVoxel(int x, int y, int z) {
@@ -53,6 +53,14 @@ public class VoxelGrid {
 
 	public boolean isAir(int x, int y, int z) {
 		return _voxels[x][y][z] == VOXEL_GRID_AIR;
+	}
+	
+	public void beginEditing() {
+		render.beginVoxelMarking();
+	}
+	
+	public void endEditing() {
+		render.endVoxelMarking();
 	}
 
 	public void clear() {
@@ -78,6 +86,7 @@ public class VoxelGrid {
 		int zmin = Math.max(0, center.z - size.z / 2);
 		int zmax = Math.min(depth, center.z + size.z / 2);
 
+		render.beginVoxelMarking();
 		// Iterate through the bounds and insert generated value
 		for (int x = xmin; x < xmax; x++) {
 			for (int y = ymin; y < ymax; y++) {
@@ -89,6 +98,7 @@ public class VoxelGrid {
 				}
 			}
 		}
+		render.endVoxelMarking();
 	}
 
 	public void draw(GL2 gl) {
