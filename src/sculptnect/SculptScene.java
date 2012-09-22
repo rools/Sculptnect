@@ -83,10 +83,10 @@ public class SculptScene implements GLEventListener, JoystickListener {
 			workersBarrier.await();
 
 			final int radius = 4;
-			int bounds[] = { DEPTH_WIDTH - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
-					DEPTH_WIDTH + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
-					DEPTH_HEIGHT - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
-					DEPTH_HEIGHT + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f) };
+			int bounds[] = { DEPTH_WIDTH / 2 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
+					DEPTH_WIDTH / 2 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
+					DEPTH_HEIGHT / 2 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
+					DEPTH_HEIGHT / 2 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f) };
 
 			int lowery = (lower < radius ? radius : lower);
 			int uppery = (upper > DEPTH_HEIGHT - radius ? DEPTH_HEIGHT - radius : upper);
@@ -220,7 +220,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 		GL2 gl = (GL2) drawable.getGL();
 
-		removeRandomSphere();
+		// removeRandomSphere();
 
 		// Set default vertex color
 		gl.glColor3f(0.0f, 0.0f, 0.0f);
@@ -312,7 +312,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 	public void updateKinect(ByteBuffer depthBuffer) {
 		depthBuffer.rewind();
 		depthBuffer.order(ByteOrder.LITTLE_ENDIAN);
-		System.out.println("updating kinect");
+		// System.out.println("updating kinect");
 		for (KinectWorker worker : kinectWorkers) {
 			worker.depthBuffer = depthBuffer;
 		}
