@@ -5,7 +5,6 @@ import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -54,7 +53,6 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 	private final ExecutorService kinectExecutorService = Executors.newFixedThreadPool(NUM_THREADS);
 	private final List<KinectWorker> kinectWorkers = new ArrayList<KinectWorker>();
-	private final CyclicBarrier workersBarrier = new CyclicBarrier(NUM_THREADS);
 
 	public class KinectWorker implements Callable<Void> {
 		public int lower, upper;
@@ -67,21 +65,6 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 		@Override
 		public Void call() throws Exception {
-			// Retrieve Kinect depth data within the near and far threshold to a
-			// depth array
-			for (int y = lower; y < upper; ++y) {
-				for (int x = 0; x < DEPTH_WIDTH; ++x) {
-					short rawDepth = depthBuffer.getShort(2 * (y * DEPTH_WIDTH + x));
-					if (rawDepth < KINECT_NEAR_THRESHOLD || rawDepth > KINECT_FAR_THRESHOLD) {
-						depth[x][y] = 0.0f;
-					} else {
-						depth[x][y] = (KINECT_FAR_THRESHOLD - rawDepth) / (float) (KINECT_FAR_THRESHOLD - KINECT_NEAR_THRESHOLD);
-					}
-				}
-			}
-
-			workersBarrier.await();
-
 			final int radius = 4;
 			int bounds[] = { DEPTH_WIDTH / 2 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
 					DEPTH_WIDTH / 2 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
@@ -312,6 +295,19 @@ public class SculptScene implements GLEventListener, JoystickListener {
 	public void updateKinect(ByteBuffer depthBuffer) {
 		depthBuffer.rewind();
 		depthBuffer.order(ByteOrder.LITTLE_ENDIAN);
+
+		// Retrieve Kinect depth data within the near and far threshold to a
+		// depth array
+		for (int y = 0; y < DEPTH_HEIGHT; ++y) {
+			for (int x = 0; x < DEPTH_WIDTH; ++x) {
+				short rawDepth = depthBuffer.getShort();
+				if (rawDepth < KINECT_NEAR_THRESHOLD || rawDepth > KINECT_FAR_THRESHOLD) {
+					depth[x][y] = 0.0f;
+				} else {
+					depth[x][y] = (KINECT_FAR_THRESHOLD - rawDepth) / (float) (KINECT_FAR_THRESHOLD - KINECT_NEAR_THRESHOLD);
+				}
+			}
+		}
 
 		for (KinectWorker worker : kinectWorkers) {
 			worker.depthBuffer = depthBuffer;
