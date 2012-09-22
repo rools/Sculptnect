@@ -320,6 +320,11 @@ public class SculptScene implements GLEventListener, JoystickListener {
 			e.printStackTrace();
 		}
 	}
+	
+	public void toggleTurningMode() {
+		turningMode = !turningMode;
+		modelRotationSpeedY = turningMode ? 1.0f : 0.0f;
+	}
 
 	public void modifyModelRotationX(float angle) {
 		modelRotationX = (modelRotationX + angle + 360.0f) % 360.0f;
@@ -347,8 +352,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		} else if (value && button.equals("3")) {
 			resetModel();
 		} else if (value && button.equals("12")) {
-			turningMode = !turningMode;
-			modelRotationSpeedY = turningMode ? 1.0f : 0.0f;
+			toggleTurningMode();
 		}
 	}
 

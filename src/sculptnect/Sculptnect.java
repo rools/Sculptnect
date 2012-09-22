@@ -140,6 +140,12 @@ public class Sculptnect {
 					}
 					canvas.requestFocus();
 					break;
+				case 'T':
+					scene.toggleTurningMode();
+					break;
+				case 'I':
+					insertKinectPlaceholder(scene);
+					break;
 				}
 			}
 		});
@@ -199,23 +205,27 @@ public class Sculptnect {
 				}
 			});
 		} else {
-			// Load a placeholder depth image for testing without Kinect
-			try {
-				InputStream is = getClass().getClassLoader().getResourceAsStream("kinect_depth.raw");
-				byte depth[] = new byte[640 * 480 * 2];
-				is.read(depth);
-				ByteBuffer byteBuffer = ByteBuffer.wrap(depth);
-				scene.updateKinect(byteBuffer);
-
-			} catch (IOException e1) {
-				e1.printStackTrace();
-			}
+			insertKinectPlaceholder(scene);
 		}
 
 		// Set up Playstation 2 controller
 		Joystick joystick = JoystickManager.getJoystick(Controller.Type.STICK);
 		if (joystick != null) {
 			joystick.setJoystickListener(scene);
+		}
+	}
+
+	public void insertKinectPlaceholder(SculptScene scene) {
+		// Load a placeholder depth image for testing without Kinect
+		try {
+			InputStream is = getClass().getClassLoader().getResourceAsStream("kinect_depth.raw");
+			byte depth[] = new byte[640 * 480 * 2];
+			is.read(depth);
+			ByteBuffer byteBuffer = ByteBuffer.wrap(depth);
+			scene.updateKinect(byteBuffer);
+
+		} catch (IOException e1) {
+			e1.printStackTrace();
 		}
 	}
 
