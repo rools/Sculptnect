@@ -82,12 +82,16 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 					// Apply simple box blur
 					float total = 0.0f;
+					int count = 0;
 					for (int xk = -radius; xk <= radius; ++xk) {
 						for (int yk = -radius; yk <= radius; ++yk) {
-							total += depth[x + xk][y + yk];
+							if (Math.abs(depth[x][y] - depth[x + xk][y + yk]) < 0.1) {
+								total += depth[x + xk][y + yk];
+								++count;
+							}
 						}
 					}
-					filteredDepth[x][y] = total / ((radius * 2 + 1) * (radius * 2 + 1));
+					filteredDepth[x][y] = total / count;
 
 					for (int i = 0; i < 30; ++i) {
 						float xOrig = x - DEPTH_WIDTH / 2;
