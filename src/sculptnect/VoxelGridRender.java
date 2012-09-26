@@ -169,8 +169,8 @@ public class VoxelGridRender {
 			}
 
 			// Take the average of all summed vectors and normalize the result
-			normal.scale(1.0f / numAdded);
-			normal.normalize();
+			//normal.scale(1.0f / numAdded);
+			//normal.normalize();
 
 			return normal;
 		}
@@ -206,7 +206,22 @@ public class VoxelGridRender {
 			}
 		}
 	}
-
+	
+	public void refresh() {
+		beginVoxelMarking();
+		
+		for (int x = 0; x < dimensions.x; x++) {
+			for (int y = 0; y < dimensions.y; y++) {
+				for (int z = 0; z < dimensions.z; z++) {
+					BufferCell cell = bufferCells[x][y][z];
+					dirtyCells.add(cell);
+				}
+			}
+		}
+		
+		endVoxelMarking();
+	}
+	
 	public void beginVoxelMarking() {
 		dirtyMarkingLock.lock();
 	}
@@ -278,8 +293,7 @@ public class VoxelGridRender {
 	}
 
 	public void draw(GL2 gl) {
-		float scale = 450.0f;
-		gl.glColor3f(107.0f / scale, 195.0f / scale, 193.0f / scale);
+		gl.glColor3f(.3f, .7f, .7f);
 
 		// Enable the vertex and normal arrays
 		gl.glEnableClientState(GL2.GL_VERTEX_ARRAY);

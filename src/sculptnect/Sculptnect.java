@@ -146,6 +146,12 @@ public class Sculptnect {
 				case 'I':
 					insertKinectPlaceholder(scene);
 					break;
+				case 'M':
+					scene.toggleRenderMode();
+					break;
+				case 'D':
+					scene.dumpMesh();
+					break;
 				}
 			}
 		});

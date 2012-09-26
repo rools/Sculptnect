@@ -9,12 +9,16 @@ public class VoxelGrid {
 	public static final byte VOXEL_GRID_NO_CHANGE = -1;
 	public static final byte VOXEL_GRID_AIR = 0;
 	public static final byte VOXEL_GRID_CLAY = 1;
-
+	
 	private byte[][][] _voxels;
+	
+	private boolean renderGrid = true;
+	private boolean renderMesh = false;
 
 	int width, height, depth;
 
 	VoxelGridRender render;
+	VoxelMeshRender meshRender;
 
 	public static int[][] offsets = {
 			//
@@ -25,7 +29,7 @@ public class VoxelGrid {
 			{ 0, 0, -1 }, //
 			{ 0, 0, 1 }, //
 	};
-
+	
 	public VoxelGrid(int size) {
 		this(size, size, size);
 	}
@@ -38,6 +42,7 @@ public class VoxelGrid {
 
 		// Create render
 		render = new VoxelGridRender(this);
+		meshRender = new VoxelMeshRender(this);
 	}
 
 	public byte getVoxel(int x, int y, int z) {
@@ -46,7 +51,8 @@ public class VoxelGrid {
 
 	public void setVoxel(int x, int y, int z, byte value) {
 		// Inform render that this voxel changed
-		render.markVoxelDirty(x, y, z);
+		if (renderGrid) render.markVoxelDirty(x, y, z);
+		if (renderMesh) meshRender.markVoxelDirty(x, y, z);
 
 		_voxels[x][y][z] = value;
 	}
@@ -56,13 +62,25 @@ public class VoxelGrid {
 	}
 	
 	public void beginEditing() {
-		render.beginVoxelMarking();
+		if (renderGrid) render.beginVoxelMarking();
+		if (renderMesh) meshRender.beginVoxelMarking();
 	}
 	
 	public void endEditing() {
-		render.endVoxelMarking();
+		if (renderGrid) render.endVoxelMarking();
+		if (renderMesh) meshRender.endVoxelMarking();
 	}
-
+	
+	public void toggleRenderMode() {
+		renderGrid = !renderGrid;
+		renderMesh = !renderMesh;
+		if (renderGrid) {
+			render.refresh();
+		} else {
+			meshRender.refresh();
+		}
+	}
+	
 	public void clear() {
 		// Iterate through all voxels and set them all to air
 		for (int x = 0; x < width; x++) {
@@ -86,7 +104,8 @@ public class VoxelGrid {
 		int zmin = Math.max(0, center.z - size.z / 2);
 		int zmax = Math.min(depth, center.z + size.z / 2);
 
-		render.beginVoxelMarking();
+		if (renderGrid) render.beginVoxelMarking();
+		if (renderMesh) meshRender.beginVoxelMarking();
 		// Iterate through the bounds and insert generated value
 		for (int x = xmin; x < xmax; x++) {
 			for (int y = ymin; y < ymax; y++) {
@@ -98,13 +117,27 @@ public class VoxelGrid {
 				}
 			}
 		}
-		render.endVoxelMarking();
+		if (renderMesh) meshRender.endVoxelMarking();
+		if (renderGrid) render.endVoxelMarking();
 	}
 
 	public void draw(GL2 gl) {
-		render.updateDirtyCells(gl);
+		if (renderGrid) render.updateDirtyCells(gl);
+		if (renderMesh) meshRender.updateDirtyChunks(gl);
 
-		render.draw(gl);
+		if (renderGrid) render.draw(gl);
+		if (renderMesh) meshRender.draw(gl);
+		
+		if (dump) {
+			dump = false;
+			meshRender.dump(gl);
+		}
 	}
-
+	
+	private boolean dump = false;
+	
+	public void dumpMesh() {
+		if (renderMesh)
+			dump = true;
+	}
 }

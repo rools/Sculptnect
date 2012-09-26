@@ -141,34 +141,46 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		GL2 gl = (GL2) drawable.getGL();
 
 		// Set background color to grayish
-		gl.glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
+		gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 		// Enable depth testing
 		gl.glEnable(GL2.GL_DEPTH_TEST);
 		gl.glDepthFunc(GL2.GL_LEQUAL);
-
+		
+		gl.glEnable(GL2.GL_CULL_FACE);
+		gl.glCullFace(GL2.GL_BACK);
+		
 		// Enable lights and set shading
 		gl.glShadeModel(GL2.GL_SMOOTH);
 		gl.glDisable(GL2.GL_POINT_SMOOTH);
+		
 		gl.glEnable(GL2.GL_LIGHTING);
 		gl.glEnable(GL2.GL_LIGHT1);
 		gl.glEnable(GL2.GL_COLOR_MATERIAL);
 		gl.glEnable(GL2.GL_BLEND);
 		gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
 
+		float material[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+		gl.glMaterialfv(GL2.GL_FRONT, GL2.GL_AMBIENT, material, 0);
+	    gl.glMaterialfv(GL2.GL_FRONT, GL2.GL_DIFFUSE, material, 0);
+	    gl.glMaterialfv(GL2.GL_FRONT, GL2.GL_SPECULAR, material, 0);
+	    
 		// Define light color and position
-		float ambientColor[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-		float light = 0.0055f;
-		float lightColor1[] = { light, light, light, 1.0f };
-		float specularColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-		float lightPos1[] = { 100000.0f, 100000.0f, 100000.0f, 1.0f };
-
+		float globalAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+		float ambient[] = { 0.35f, 0.35f, 0.35f, 1.0f };
+		float diffuse[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+		float specular[] = { 0.15f, 0.15f, 0.15f, 1.0f };
+		float lightPos1[] = { 1000.0f, 1000.0f, 1000.0f, 1.0f };
+		
 		// Set light color and position
-		gl.glLightModelfv(GL2.GL_LIGHT_MODEL_AMBIENT, ambientColor, 0);
-		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_AMBIENT, ambientColor, 0);
-		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_SPECULAR, specularColor, 0);
-		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_DIFFUSE, lightColor1, 0);
+		gl.glLightModelfv(GL2.GL_LIGHT_MODEL_AMBIENT, globalAmbient, 0);
+		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_AMBIENT, ambient, 0);
+		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_DIFFUSE, diffuse, 0);
+		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_SPECULAR, specular, 0);
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, lightPos1, 0);
+	    
+		gl.glEnable(GL2.GL_NORMALIZE);
+		gl.glMaterialf(GL2.GL_FRONT, GL2.GL_SHININESS, 4);// 1==matte | 128==glossy | 0==peripheral distortions
 	}
 
 	public void resetModel() {
@@ -203,7 +215,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 		GL2 gl = (GL2) drawable.getGL();
 
-		// removeRandomSphere();
+		//removeRandomSphere();
 
 		// Set default vertex color
 		gl.glColor3f(0.0f, 0.0f, 0.0f);
@@ -337,7 +349,15 @@ public class SculptScene implements GLEventListener, JoystickListener {
 	public void modifyModelRotationY(float angle) {
 		modelRotationY = (modelRotationY + angle + 360.0f) % 360;
 	}
-
+	
+	public void toggleRenderMode() {
+		grid.toggleRenderMode();
+	}
+	
+	public void dumpMesh() {
+		grid.dumpMesh();
+	}
+	
 	@Override
 	public void buttonReceived(String button, boolean value) {
 		if (button.equals("10")) {
