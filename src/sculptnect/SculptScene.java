@@ -140,7 +140,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 	public void init(GLAutoDrawable drawable) {
 		GL2 gl = (GL2) drawable.getGL();
 
-		// Set background color to grayish
+		// Set background color to black
 		gl.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 		// Enable depth testing
