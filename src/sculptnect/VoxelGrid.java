@@ -14,7 +14,8 @@ public class VoxelGrid {
 	
 	private boolean renderGrid = true;
 	private boolean renderMesh = false;
-
+	private boolean switchRender = false;
+	
 	int width, height, depth;
 
 	VoxelGridRender render;
@@ -62,6 +63,17 @@ public class VoxelGrid {
 	}
 	
 	public void beginEditing() {
+		if (switchRender) {
+			switchRender = false;
+			renderGrid = !renderGrid;
+			renderMesh = !renderMesh;
+			if (renderGrid) {
+				render.refresh();
+			} else {
+				meshRender.refresh();
+			}
+		}		
+
 		if (renderGrid) render.beginVoxelMarking();
 		if (renderMesh) meshRender.beginVoxelMarking();
 	}
@@ -72,13 +84,7 @@ public class VoxelGrid {
 	}
 	
 	public void toggleRenderMode() {
-		renderGrid = !renderGrid;
-		renderMesh = !renderMesh;
-		if (renderGrid) {
-			render.refresh();
-		} else {
-			meshRender.refresh();
-		}
+		switchRender = true;
 	}
 	
 	public void clear() {
@@ -104,8 +110,7 @@ public class VoxelGrid {
 		int zmin = Math.max(0, center.z - size.z / 2);
 		int zmax = Math.min(depth, center.z + size.z / 2);
 
-		if (renderGrid) render.beginVoxelMarking();
-		if (renderMesh) meshRender.beginVoxelMarking();
+		beginEditing();
 		// Iterate through the bounds and insert generated value
 		for (int x = xmin; x < xmax; x++) {
 			for (int y = ymin; y < ymax; y++) {
@@ -117,8 +122,7 @@ public class VoxelGrid {
 				}
 			}
 		}
-		if (renderMesh) meshRender.endVoxelMarking();
-		if (renderGrid) render.endVoxelMarking();
+		endEditing();
 	}
 
 	public void draw(GL2 gl) {
