@@ -26,7 +26,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 	private final short KINECT_FAR_THRESHOLD = KinectUtils.metersToRawDepth(1.4f);
 	private final float KINECT_DEPTH_FACTOR = 500.0f;
 
-	private static final int NUM_THREADS = 4;
+	private static final int NUM_THREADS = 8;
 
 	private static final int DEPTH_WIDTH = 640;
 	private static final int DEPTH_HEIGHT = 480;
@@ -93,7 +93,8 @@ public class SculptScene implements GLEventListener, JoystickListener {
 					}
 					filteredDepth[x][y] = total / count;
 
-					for (int i = 0; i < 30; ++i) {
+					int padDepth = 30;
+					for (int i = 0; i < padDepth; ++i) {
 						float xOrig = x - DEPTH_WIDTH / 2;
 						float yOrig = (DEPTH_HEIGHT - 1 - y) - DEPTH_HEIGHT / 2;
 						float zOrig = filteredDepth[x][y] * KINECT_DEPTH_FACTOR - KINECT_DEPTH_FACTOR * 0.5f - i;
@@ -183,8 +184,8 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_SPECULAR, specular, 0);
 		gl.glLightfv(GL2.GL_LIGHT1, GL2.GL_POSITION, lightPos1, 0);
 	    
-		gl.glEnable(GL2.GL_NORMALIZE);
-		gl.glMaterialf(GL2.GL_FRONT, GL2.GL_SHININESS, 4);// 1==matte | 128==glossy | 0==peripheral distortions
+		//gl.glEnable(GL2.GL_NORMALIZE);
+		gl.glMaterialf(GL2.GL_FRONT, GL2.GL_SHININESS, 32);// 1==matte | 128==glossy | 0==peripheral distortions
 	}
 
 	public void resetModel() {
@@ -230,17 +231,17 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		gl.glLoadIdentity();
 
 		// Move away from center
-		gl.glTranslatef(0.0f, 0.0f, -3.5f);
+		gl.glTranslatef(0.0f, 0.0f, -grid.depth<<1);
 
 		// Scale down the grid to fit on screen
-		gl.glScalef(2.0f / grid.width, 2.0f / grid.height, 2.0f / grid.depth);
+		//gl.glScalef(2.0f / grid.width, 2.0f / grid.height, 2.0f / grid.depth);
 
 		// Rotate around x and y axes
 		gl.glRotatef(rotation.x * 57.2957795f, 1.0f, 0.0f, 0.0f);
 		gl.glRotatef(rotation.y * 57.2957795f, 0.0f, 1.0f, 0.0f);
 
 		// Draw voxel grid
-		gl.glPointSize(6.0f);
+		gl.glPointSize(5.0f);
 		gl.glPushMatrix();
 		gl.glRotatef(modelRotationX, -1.0f, 0.0f, 0.0f);
 

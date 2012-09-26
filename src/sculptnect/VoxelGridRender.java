@@ -22,7 +22,7 @@ import com.jogamp.common.nio.Buffers;
 
 public class VoxelGridRender {
 	private static final int CELL_SIZE = 20;
-	private static final int NUM_THREADS = 4;
+	private static final int NUM_THREADS = 8;
 
 	VoxelGrid grid;
 	BufferCell[][][] bufferCells;
@@ -170,7 +170,7 @@ public class VoxelGridRender {
 
 			// Take the average of all summed vectors and normalize the result
 			//normal.scale(1.0f / numAdded);
-			//normal.normalize();
+			normal.normalize();
 
 			return normal;
 		}

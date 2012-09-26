@@ -32,7 +32,7 @@ import com.jogamp.common.nio.Buffers;
  *  Should manage around 256^3 voxel grids on a standard notebook (2012).
  */
 public class VoxelMeshRender {
-	private static final int NUM_THREADS = 2;
+	private static final int NUM_THREADS = 8;
 	private static final int CHUNK_SIZE = 32;// WARN: make sure power of two otherwise markVoxelDirty method fails
 	private static final int VERTEX_SIZE = 3;
 	private static final int NORMAL_SIZE = 3;
@@ -334,7 +334,11 @@ public class VoxelMeshRender {
 							v[5] += zd;
 						}
 					}
-			// normalized with gl_normalize
+			
+			float len = (float) Math.sqrt(v[3] * v[3] + v[4] * v[4] + v[5] * v[5]);
+			v[3] /= len;
+			v[4] /= len;
+			v[5] /= len;
 		}
 	}
 	

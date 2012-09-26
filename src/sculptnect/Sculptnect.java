@@ -56,6 +56,7 @@ public class Sculptnect {
 		caps.setRedBits(8);
 		caps.setGreenBits(8);
 		caps.setBlueBits(8);
+		caps.setDepthBits(32);
 
 		final SculptScene scene = new SculptScene();
 
