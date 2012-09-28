@@ -69,6 +69,11 @@ public class Sculptnect {
 
 		frame.add(canvas);
 		frame.setSize(800, 800);
+		
+		GraphicsEnvironment environment = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		GraphicsDevice device = environment.getDefaultScreenDevice();
+		frame.setUndecorated(true);
+		device.setFullScreenWindow(frame);
 		frame.setVisible(true);
 		canvas.requestFocus();
 		animator.start();

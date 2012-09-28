@@ -76,7 +76,7 @@ public class VoxelMeshRender {
 		ChunkData chunkData;
 		
 		public void init (ChunkData chunkData) {
-			this.chunkData = chunkData;
+			//this.chunkData = chunkData;
 			chunkData.vertexBuffer.clear();
 			chunkData.faces.clear();
 			numNewIndices = 0;
@@ -147,7 +147,7 @@ public class VoxelMeshRender {
 					for (int x=chunk.lowerIndices[0]; x<chunk.upperIndices[0]; ++x)
 						for (int y=chunk.lowerIndices[1]; y<chunk.upperIndices[1]; ++y)
 							for (int z=chunk.lowerIndices[2]; z<chunk.upperIndices[2]; ++z)
-								updateVertices(chunk, x, y, z);
+								updateVertices(chunk, chunkData, x, y, z);
 					
 					chunk.numNewIndices = chunkData.faces.size();
 					
@@ -156,6 +156,7 @@ public class VoxelMeshRender {
 						vertexBuffer.put(vertex);
 					
 					vertexBuffer.rewind();
+					chunk.chunkData = chunkData;
 					completedChunkSet.add(chunk);// send off chunk for rendering
 				}
 			} catch (Exception e) {
@@ -163,7 +164,7 @@ public class VoxelMeshRender {
 			}
 		}
 		
-		private void updateVertices (Chunk chunk, int x, int y, int z) {
+		private void updateVertices (Chunk chunk, ChunkData chunkData, int x, int y, int z) {
 			/*
 			 * Find all relevant edge crossings, ie where a cell transitions from
 			 * matter->air or other way around. An edge crossing means we have two
@@ -210,9 +211,9 @@ public class VoxelMeshRender {
 			// If no relevant edge crossings exist (we mustnt check all)
 			if (c0==c1 && c1==c2 && c2==c3 && c7==c4 && c7==c5 && c7==c6)
 				return;
-			
-			ArrayList<float[]> faces = chunk.chunkData.faces;
-			float[][][][] nodes = chunk.chunkData.nodes;
+
+			ArrayList<float[]> faces = chunkData.faces;
+			float[][][][] nodes = chunkData.nodes;
 			
 			// get node/vertex local coords in chunk, compensate for offset
 			int vx = x - chunk.lowerIndices[0] + VERTEX_GRID_OFFSET;
@@ -272,6 +273,7 @@ public class VoxelMeshRender {
 					if (c6) addFace(faces, v, vy1, vz1);// y+1, z+1
 				}
 			}
+			
 		}
 		
 		private void addFace (ArrayList<float[]> faces, float[] v0, float[] v1, float[] v2) {

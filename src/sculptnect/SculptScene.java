@@ -65,7 +65,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 		@Override
 		public Void call() throws Exception {
-			final int radius = 4;
+			final int radius = 0;
 			int bounds[] = { DEPTH_WIDTH / 2 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
 					DEPTH_WIDTH / 2 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
 					DEPTH_HEIGHT / 2 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
@@ -85,7 +85,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 					int count = 0;
 					for (int xk = -radius; xk <= radius; ++xk) {
 						for (int yk = -radius; yk <= radius; ++yk) {
-							if (Math.abs(depth[x][y] - depth[x + xk][y + yk]) < 0.1) {
+							if (Math.abs(depth[x][y] - depth[x + xk][y + yk]) < 0.02) {
 								total += depth[x + xk][y + yk];
 								++count;
 							}
@@ -152,8 +152,8 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		gl.glEnable(GL2.GL_DEPTH_TEST);
 		gl.glDepthFunc(GL2.GL_LEQUAL);
 		
-		gl.glEnable(GL2.GL_CULL_FACE);
-		gl.glCullFace(GL2.GL_BACK);
+		//gl.glEnable(GL2.GL_CULL_FACE);
+		//gl.glCullFace(GL2.GL_BACK);
 		
 		// Enable lights and set shading
 		gl.glShadeModel(GL2.GL_SMOOTH);
@@ -241,7 +241,7 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		gl.glRotatef(rotation.y * 57.2957795f, 0.0f, 1.0f, 0.0f);
 
 		// Draw voxel grid
-		gl.glPointSize(5.0f);
+		gl.glPointSize(4.0f);
 		gl.glPushMatrix();
 		gl.glRotatef(modelRotationX, -1.0f, 0.0f, 0.0f);
 
@@ -261,8 +261,9 @@ public class SculptScene implements GLEventListener, JoystickListener {
 		gl.glColor4f(0.5f, 0.5f, 0.5f, 0.5f);
 		for (int x = 0; x < DEPTH_WIDTH; ++x) {
 			for (int y = 0; y < DEPTH_HEIGHT; ++y) {
-				if (depth[x][y] > 0.0f) {
-					gl.glVertex3f(x, DEPTH_HEIGHT - y, depth[x][y] * KINECT_DEPTH_FACTOR);
+				if (filteredDepth[x][y] > 0.0f) {
+					gl.glColor4f(0.5f, 0.1f, 0.1f, filteredDepth[x][y] + 0.1f);
+					gl.glVertex3f(x, DEPTH_HEIGHT - y, filteredDepth[x][y] * KINECT_DEPTH_FACTOR);
 				}
 			}
 		}
