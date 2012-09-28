@@ -10,7 +10,7 @@ public class VoxelGrid {
 	public static final byte VOXEL_GRID_AIR = 0;
 	public static final byte VOXEL_GRID_CLAY = 1;
 	
-	private byte[][][] _voxels;
+	public byte[][][] _voxels;
 	
 	private boolean renderGrid = true;
 	private boolean renderMesh = false;

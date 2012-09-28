@@ -102,8 +102,7 @@ public class VoxelGridRender {
 								if (grid.isAir(x, y, z))
 									continue;
 
-								// Determine if voxel is completely inside by
-								// examining its neighbors
+								int numEmpty = 0;
 								for (int i = 0; i < 6; i++) {
 									int[] offset = VoxelGrid.offsets[i];
 									int xoff = x + offset[0];
@@ -111,21 +110,40 @@ public class VoxelGridRender {
 									int zoff = z + offset[2];
 
 									boolean inside = xoff >= 0 && xoff < grid.width && yoff >= 0 && yoff < grid.height && zoff >= 0 && zoff < grid.depth;
-									if (!inside || (grid.getVoxel(xoff, yoff, zoff) != grid.getVoxel(x, y, z))) {
-										cell.numNewIndices++;
+									if (inside && grid.getVoxel(xoff, yoff, zoff) == VoxelGrid.VOXEL_GRID_AIR) {
+										numEmpty++;
+									}
+								}
+								
+								
+								if (numEmpty > 4) {
+									grid._voxels[x][y][z] = VoxelGrid.VOXEL_GRID_AIR;
+								} else {
+									// Determine if voxel is completely inside by
+									// examining its neighbors
+									for (int i = 0; i < 6; i++) {
+										int[] offset = VoxelGrid.offsets[i];
+										int xoff = x + offset[0];
+										int yoff = y + offset[1];
+										int zoff = z + offset[2];
 
-										// Put vertex data into buffer
-										floatBuffer.put(x);
-										floatBuffer.put(y);
-										floatBuffer.put(z);
+										boolean inside = xoff >= 0 && xoff < grid.width && yoff >= 0 && yoff < grid.height && zoff >= 0 && zoff < grid.depth;
+										if (!inside || (grid.getVoxel(xoff, yoff, zoff) != grid.getVoxel(x, y, z))) {
+											cell.numNewIndices++;
 
-										// Put normal for the vertex into buffer
-										Vector3f n = this.normalForVoxel(x, y, z, normal);
-										floatBuffer.put(n.x);
-										floatBuffer.put(n.y);
-										floatBuffer.put(n.z);
+											// Put vertex data into buffer
+											floatBuffer.put(x);
+											floatBuffer.put(y);
+											floatBuffer.put(z);
 
-										break;
+											// Put normal for the vertex into buffer
+											Vector3f n = this.normalForVoxel(x, y, z, normal);
+											floatBuffer.put(n.x);
+											floatBuffer.put(n.y);
+											floatBuffer.put(n.z);
+
+											break;
+										}
 									}
 								}
 							}
