@@ -70,6 +70,11 @@ public class SculptScene implements GLEventListener, JoystickListener {
 					DEPTH_WIDTH / 2 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
 					DEPTH_HEIGHT / 2 - (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f), //
 					DEPTH_HEIGHT / 2 + (int) (Math.sqrt(3) * VOXEL_GRID_SIZE * 0.5f) };
+			
+			float cosModelRotationY = SculptMath.cos(modelRotationY);
+			float cosModelRotationX = SculptMath.cos(modelRotationX);
+			float sinModelRotationY = SculptMath.sin(modelRotationY);
+			float sinModelRotationX = SculptMath.sin(modelRotationX);
 
 			int lowery = (lower < radius ? radius : lower);
 			int uppery = (upper > DEPTH_HEIGHT - radius ? DEPTH_HEIGHT - radius : upper);
@@ -101,9 +106,9 @@ public class SculptScene implements GLEventListener, JoystickListener {
 
 						// Rotate the points the same amount that the model is
 						// rotated
-						float xVal = (float) (xOrig * SculptMath.cos(modelRotationY) + yOrig * SculptMath.sin(modelRotationY) * SculptMath.sin(modelRotationX) + zOrig * SculptMath.sin(modelRotationY) * SculptMath.cos(modelRotationX));
-						float yVal = (float) (yOrig * SculptMath.cos(modelRotationX) - zOrig * SculptMath.sin(modelRotationX));
-						float zVal = (float) (-xOrig * SculptMath.sin(modelRotationY) + yOrig * SculptMath.cos(modelRotationY) * SculptMath.sin(modelRotationX) + zOrig * SculptMath.cos(modelRotationY) * SculptMath.cos(modelRotationX));
+						float xVal = (float) (xOrig * cosModelRotationY + yOrig * sinModelRotationY * sinModelRotationX + zOrig * sinModelRotationY * cosModelRotationX);
+						float yVal = (float) (yOrig * cosModelRotationX - zOrig * sinModelRotationX);
+						float zVal = (float) (-xOrig * sinModelRotationY + yOrig * cosModelRotationY * sinModelRotationX + zOrig * cosModelRotationY * cosModelRotationX);
 
 						int xPos = (int) (xVal + VOXEL_GRID_SIZE / 2);
 						int yPos = (int) (yVal + VOXEL_GRID_SIZE / 2);
